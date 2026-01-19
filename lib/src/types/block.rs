@@ -123,7 +123,7 @@ impl Saveable for Block {
 
     fn save<O: Write>(&self, writer: O) -> IoResult<()> {
         ciborium::ser::into_writer(self, writer).map_err(|_| {
-                IoError::new(IoErrorKind::InvalidData, "Failed to serialize Block")
+            IoError::new(IoErrorKind::InvalidData, "Failed to serialize Block")
         })
     }
 }
