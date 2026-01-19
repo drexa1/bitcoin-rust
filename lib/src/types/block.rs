@@ -1,3 +1,7 @@
+use std::io::{
+    Error as IoError, ErrorKind as IoErrorKind, Read,
+    Result as IoResult, Write,
+};
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use primitive_types::U256;
@@ -5,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::crypto::{Hash, MerkleRoot};
 use crate::error::BtcError;
 use crate::types::transaction::{Transaction, TransactionOutput};
+use crate::util::Saveable;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Block { pub header: BlockHeader, pub transactions: Vec<Transaction> }
@@ -106,6 +111,28 @@ impl Block {
         let input_value: u64 = inputs.values().map(|output| output.value).sum();
         let output_value: u64 = outputs.values().map(|output| output.value).sum();
         Ok(input_value - output_value)
+    }
+}
+/// Save and load expecting CBOR from ciborium as format
+impl Saveable for Block {
+    fn load<I: Read>(reader: I) -> IoResult<Self> {
+        ciborium::de::from_reader(reader).map_err(|_| {
+            IoError::new(
+                IoErrorKind::InvalidData,
+                "Failed to deserialize Block",
+            )
+        })
+    }
+
+    fn save<O: Write>(&self, writer: O) -> IoResult<()> {
+        ciborium::ser::into_writer(self, writer).map_err(
+            |_| {
+                IoError::new(
+                    IoErrorKind::InvalidData,
+                    "Failed to serialize Block",
+                )
+            },
+        )
     }
 }
 
