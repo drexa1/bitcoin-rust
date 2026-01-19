@@ -7,6 +7,9 @@ use uuid::Uuid;
 use crate::crypto::{Hash, MerkleRoot, Signature, PublicKey};
 use crate::error::{BtcError, Result};
 
+/// ------------------------------------------------------------------------------------------------
+/// Blockchain
+/// ------------------------------------------------------------------------------------------------
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Blockchain {
     utxos: HashMap<Hash, (bool, TransactionOutput)>,
@@ -51,6 +54,37 @@ impl Blockchain {
                 return Err(BtcError::InvalidTransaction);
             }
             known_inputs.insert(input.prev_transaction_output_hash);
+        }
+        // Check if any of the utxos have the bool mark set to true.
+        // If so, find the transaction that references them in mempool, remove it, and set all the utxos it references to false
+        for input in &transaction.inputs {
+            if let Some((true, _)) = self.utxos.get(&input.prev_transaction_output_hash) {
+                // Find the transaction that references the UTXO we are trying to reference
+                let referencing_transaction = self.mempool
+                    .iter()
+                    .enumerate()
+                    .find(|(_, transaction)| {
+                        transaction.outputs.iter().any(|output| {
+                            output.hash() == input.prev_transaction_output_hash
+                        })
+                    });
+                // If found, unmark all of its UTXOs
+                if let Some((idx, referencing_transaction)) = referencing_transaction {
+                    for input in &referencing_transaction.inputs {
+                        // Set all utxos from this transaction to false
+                        self.utxos.entry(input.prev_transaction_output_hash).and_modify(|(marked, _)| {
+                            *marked = false;
+                        });
+                    }
+                    // remove the transaction from the mempool
+                    self.mempool.remove(idx);
+                } else {
+                    // If somehow there is no matching transaction, set this utxo to false
+                    self.utxos.entry(input.prev_transaction_output_hash).and_modify(|(marked, _)| {
+                        *marked = false;
+                    });
+                }
+            }
         }
         // All inputs must be lower than all outputs
         let all_inputs = transaction
@@ -170,6 +204,9 @@ impl Blockchain {
     }
 }
 
+/// ------------------------------------------------------------------------------------------------
+/// Block & Blockheader
+/// ------------------------------------------------------------------------------------------------
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Block { pub header: BlockHeader, pub transactions: Vec<Transaction> }
 impl Block {
@@ -315,6 +352,23 @@ impl BlockHeader {
     }
 }
 
+/// ------------------------------------------------------------------------------------------------
+/// Transaction
+/// ------------------------------------------------------------------------------------------------
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Transaction {
+    pub inputs: Vec<TransactionInput>,
+    pub outputs: Vec<TransactionOutput>
+}
+impl Transaction {
+    pub fn new(inputs: Vec<TransactionInput>, outputs: Vec<TransactionOutput>) -> Self {
+        Transaction { inputs, outputs }
+    }
+    pub fn hash(&self) -> Hash {
+        Hash::hash(self)
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TransactionInput {
     /// The hash of the transaction output, which we are linking into this transaction as input
@@ -334,18 +388,3 @@ impl TransactionOutput {
         Hash::hash(self)
     }
 }
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Transaction {
-    pub inputs: Vec<TransactionInput>,
-    pub outputs: Vec<TransactionOutput>
-}
-impl Transaction {
-    pub fn new(inputs: Vec<TransactionInput>, outputs: Vec<TransactionOutput>) -> Self {
-        Transaction { inputs, outputs }
-    }
-    pub fn hash(&self) -> Hash {
-        Hash::hash(self)
-    }
-}
-
