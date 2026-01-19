@@ -6,17 +6,16 @@ use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 use crate::crypto::{Hash, MerkleRoot, Signature, PublicKey};
 use crate::error::{BtcError, Result};
+use crate::MAX_MEMPOOL_TRANSACTION_AGE;
 
-/// ------------------------------------------------------------------------------------------------
-/// Blockchain
-/// ------------------------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Blockchain {
     utxos: HashMap<Hash, (bool, TransactionOutput)>,
     target: U256,
     blocks: Vec<Block>,
     #[serde(default, skip_serializing)]
-    mempool: Vec<Transaction>
+    mempool: Vec<(DateTime<Utc>, Transaction)>
 }
 impl Blockchain {
     pub fn new() -> Self {
@@ -39,10 +38,10 @@ impl Blockchain {
     pub fn target(&self) -> U256 {
         self.target
     }
-    pub fn mempool(&self, ) -> &[Transaction] {
+    pub fn mempool(&self) -> &[(DateTime<Utc>, Transaction)] {
         &self.mempool
     }
-    // Add a transaction to mempool
+    /// Add a transaction to mempool
     pub fn add_to_mempool(&mut self, transaction: Transaction) -> Result<()> {
         // All inputs must match known UTXOs, and must be unique
         let mut known_inputs = HashSet::new();
@@ -63,13 +62,13 @@ impl Blockchain {
                 let referencing_transaction = self.mempool
                     .iter()
                     .enumerate()
-                    .find(|(_, transaction)| {
+                    .find(|(_, (_, transaction))| {
                         transaction.outputs.iter().any(|output| {
                             output.hash() == input.prev_transaction_output_hash
                         })
                     });
                 // If found, unmark all of its UTXOs
-                if let Some((idx, referencing_transaction)) = referencing_transaction {
+                if let Some((idx, (_, referencing_transaction))) = referencing_transaction {
                     for input in &referencing_transaction.inputs {
                         // Set all utxos from this transaction to false
                         self.utxos.entry(input.prev_transaction_output_hash).and_modify(|(marked, _)| {
@@ -98,9 +97,15 @@ impl Blockchain {
         if all_inputs < all_outputs {
             return Err(BtcError::InvalidTransaction);
         }
-        self.mempool.push(transaction);
+        // Mark the UTXOs as used
+        for input in &transaction.inputs {
+            self.utxos.entry(input.prev_transaction_output_hash).and_modify(|(marked, _)| {
+                *marked = true;
+            });
+        }
+        self.mempool.push((Utc::now(), transaction));
         // Sort by miner fee
-        self.mempool.sort_by_key(|transaction| {
+        self.mempool.sort_by_key(|(_, transaction)| {
             let all_inputs = transaction
                 .inputs
                 .iter()
@@ -113,6 +118,28 @@ impl Blockchain {
             miner_fee
         });
         Ok(())
+    }
+    /// Cleanup mempool - remove transactions older than MAX_MEMPOOL_TRANSACTION_AGE
+    pub fn cleanup_mempool(&mut self) {
+        let now = Utc::now();
+        let mut utxo_hashes_to_unmark: Vec<Hash> = vec![];
+        self.mempool.retain(|(timestamp, transaction)| {
+            if now - *timestamp > chrono::Duration::seconds(MAX_MEMPOOL_TRANSACTION_AGE as i64) {
+                // Push all utxos to unmark to the vector so we can unmark them later
+                utxo_hashes_to_unmark.extend(transaction.inputs.iter().map(|input| {
+                    input.prev_transaction_output_hash
+                }));
+                false
+            } else {
+                true
+            }
+        });
+        // Unmark all the UTXOs
+        for hash in utxo_hashes_to_unmark {
+            self.utxos.entry(hash).and_modify(|(marked, _)| {
+                *marked = false;
+            });
+        }
     }
     pub fn add_block(&mut self, block: Block) -> Result<()> {
         // Check if the block is valid
@@ -149,7 +176,7 @@ impl Blockchain {
         }
         // Remove transactions from mempool that are now in the block
         let block_transactions: HashSet<_> = block.transactions.iter().map(|tx| tx.hash()).collect();
-        self.mempool.retain(|tx| {
+        self.mempool.retain(|(_, tx)| {
             !block_transactions.contains(&tx.hash())
         });
         self.blocks.push(block);
@@ -189,7 +216,7 @@ impl Blockchain {
         // If new target is more than the minimum target, set it to the minimum target
         self.target = new_target.min(crate::MIN_TARGET);
     }
-    // Rebuild UTXO set from the blockchain
+    /// Rebuild UTXO set from the blockchain
     pub fn rebuild_utxos(&mut self) {
         for block in &self.blocks {
             for transaction in &block.transactions {
@@ -204,9 +231,7 @@ impl Blockchain {
     }
 }
 
-/// ------------------------------------------------------------------------------------------------
-/// Block & Blockheader
-/// ------------------------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Block { pub header: BlockHeader, pub transactions: Vec<Transaction> }
 impl Block {
@@ -216,7 +241,7 @@ impl Block {
     pub fn hash(&self) -> Hash {
         Hash::hash(self)
     }
-    // Verify all transactions in the block
+    /// Verify all transactions in the block
     pub fn verify_transactions(&self, predicted_block_height: u64, utxos: &HashMap<Hash, (bool, TransactionOutput)>) -> Result<()> {
         let mut inputs: HashMap<Hash, TransactionOutput> = HashMap::new();
         // Reject completely empty blocks
@@ -255,7 +280,7 @@ impl Block {
         }
         Ok(())
     }
-    // Verify coinbase transaction
+    /// Verify coinbase transaction
     pub fn verify_coinbase_transaction(&self, predicted_block_height: u64, utxos: &HashMap<Hash,  (bool, TransactionOutput)>) -> Result<()> {
         // Coinbase tx is the first transaction in the block
         let coinbase_transaction = &self.transactions[0];
@@ -333,7 +358,7 @@ impl BlockHeader {
         unimplemented!()
     }
     pub fn mine(&mut self, steps: usize) -> bool {
-        // Ff the block already matches target, return early
+        // If the block already matches target, return early
         if self.hash().matches_target(self.target) {
             return true;
         }
@@ -352,9 +377,7 @@ impl BlockHeader {
     }
 }
 
-/// ------------------------------------------------------------------------------------------------
-/// Transaction
-/// ------------------------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////////////////////////
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Transaction {
     pub inputs: Vec<TransactionInput>,

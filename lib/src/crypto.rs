@@ -15,7 +15,7 @@ use crate::types::Transaction;
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct Hash(U256);
 impl Hash {
-    // Hash anything that can be serialized via Ciborium
+    /// Hash anything that can be serialized via Ciborium
     pub fn hash<T: serde::Serialize>(data: &T) -> Self {
         let mut serialized: Vec<u8> = vec![];
         if let Err(e) = ciborium::into_writer(data, &mut serialized) {
@@ -26,20 +26,21 @@ impl Hash {
         let hash_array: [u8; 32] = hash_bytes.as_slice().try_into().unwrap();
         Hash(U256::from_big_endian(&hash_array))
     }
-    // Check if a hash matches a target
+    /// Check if a hash matches a target
     pub fn matches_target(&self, target: U256) -> bool {
         self.0 <= target
     }
-    // Zero hash
+    /// Zero hash
     pub fn zero() -> Self {
         Hash(U256::zero())
     }
-    // To bytes
+    /// To bytes
     pub fn as_bytes(&self) -> [u8; 32] {
         let bytes = self.0.to_little_endian();
         bytes.as_slice().try_into().unwrap()
     }
 }
+
 impl fmt::Display for Hash {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:x}", self.0)
@@ -49,13 +50,13 @@ impl fmt::Display for Hash {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Signature(ECDSASignature<Secp256k1>);
 impl Signature {
-    // Sign a crate::types::TransactionOutput from its Sha256 hash
+    /// Sign a TransactionOutput from its Sha256 hash
     pub fn sign_output(output_hash: &Hash, private_key: &PrivateKey) -> Self {
         let signing_key = &private_key.0;
         let signature = signing_key.sign(&output_hash.as_bytes());
         Signature(signature)
     }
-    // Verify a signature
+    /// Verify a signature
     pub fn verify(&self, output_hash: &Hash, public_key: &PublicKey) -> bool {
         public_key.0.verify(&output_hash.as_bytes(), &self.0).is_ok()
     }
@@ -106,7 +107,7 @@ impl MerkleRoot {
             let mut new_layer = vec![];
             for pair in layer.chunks(2) {
                 let left = pair[0];
-                // if there is no right, use the left one again
+                // If there is no right, use the left one again
                 let right = pair.get(1).unwrap_or(&pair[0]);
                 new_layer.push(Hash::hash(&[left, *right]));
             }
