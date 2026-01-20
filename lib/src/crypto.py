@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Any, List
 import cbor2
 from ecdsa import SigningKey, VerifyingKey, SECP256k1, BadSignatureError  # noqa
+from pydantic import BaseModel, field_serializer, field_validator
 
 
 @dataclass(frozen=True)
@@ -31,9 +32,26 @@ class Hash:
         return self.value.to_bytes(32, byteorder="little", signed=False)
 
 
-@dataclass
-class PublicKey:
+
+class PublicKey(BaseModel):
     key: VerifyingKey
+
+    model_config = {
+        "arbitrary_types_allowed": True
+    }
+
+    # Serializer: VerifyingKey -> hex string
+    @field_serializer("key")
+    def serialize_key(self, vk: VerifyingKey):
+        return vk.to_string().hex()
+
+    # Validator: hex string -> VerifyingKey
+    @field_validator("key", mode="before")
+    def parse_key(cls, v):
+        if isinstance(v, str):
+            return VerifyingKey.from_string(bytes.fromhex(v), curve=SECP256k1)
+        return v
+
 
 
 @dataclass
@@ -45,7 +63,7 @@ class PrivateKey:
         return PrivateKey(SigningKey.generate(curve=SECP256k1))
 
     def public_key(self) -> PublicKey:
-        return PublicKey(self.key.get_verifying_key())
+        return PublicKey(key=self.key.get_verifying_key())
 
     def to_bytes(self) -> bytes:
         return self.key.to_string()

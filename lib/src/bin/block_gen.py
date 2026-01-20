@@ -15,7 +15,11 @@ def main():
     private_key = PrivateKey.new_key()
     transactions = [Transaction(
         inputs=[],
-        outputs=[TransactionOutput(INITIAL_REWARD * (10 ** 8), uuid4(), private_key.public_key())]
+        outputs=[TransactionOutput(
+            unique_id=uuid4(),
+            value=INITIAL_REWARD * (10 ** 8),
+            public_key=private_key.public_key()
+        )]
     )]
     merkle_root = MerkleRoot.calculate(transactions)
     block = Block(header=BlockHeader(

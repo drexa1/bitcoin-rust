@@ -11,11 +11,15 @@ class TransactionInput:
     prev_transaction_output_hash: Hash
     signature: Signature
 
-@dataclass
-class TransactionOutput:
+
+class TransactionOutput(BaseModel):
     value: int
     unique_id: UUID
     public_key: PublicKey
+
+    model_config = {
+        "arbitrary_types_allowed": True
+    }
 
     def hash(self) -> Hash:
         return Hash.hash(self)

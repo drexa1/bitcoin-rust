@@ -1,5 +1,5 @@
 import sys
-from ..types.transaction import Transaction
+from lib.src.types.transaction import Transaction
 
 
 def main():

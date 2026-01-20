@@ -5,7 +5,7 @@ from pydantic import BaseModel
 import cbor2
 from io import BytesIO
 from crypto import Hash, MerkleRoot
-from transaction import Transaction, TransactionOutput
+from lib.src.types.transaction import Transaction, TransactionOutput
 from error import InvalidTransaction, InvalidSignature
 
 INITIAL_REWARD = 50
