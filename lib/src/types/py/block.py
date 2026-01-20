@@ -1,12 +1,10 @@
 from datetime import datetime, timezone
-from io import BytesIO
-from pathlib import Path
 from typing import Tuple
-import cbor2
 from pydantic import BaseModel
 from lib.src.types.py.crypto import Hash, MerkleRoot
 from lib.src.types.py.error import InvalidTransaction, InvalidSignature
 from lib.src.types.py.transaction import Transaction, TransactionOutput
+from lib.src.types.py.util import CBORSerializable
 
 INITIAL_REWARD = 50
 HALVING_INTERVAL = 210000
@@ -34,7 +32,7 @@ class BlockHeader(BaseModel):
         return False
 
 
-class Block(BaseModel):
+class Block(BaseModel, CBORSerializable):
     header: BlockHeader
     transactions: list[Transaction]
 
@@ -106,15 +104,3 @@ class Block(BaseModel):
         total_input = sum(o.value for o in inputs.values())
         total_output = sum(o.value for o in outputs.values())
         return total_input - total_output
-
-    def save(self, filename: Path) -> None:
-        with open(filename, "wb") as f:
-            cbor2.dump(self.model_dump(), f)
-
-    @classmethod
-    def load(cls, filename: Path) -> "Block":
-        with open(filename, "rb") as f:
-            data = cbor2.load(f)
-        return cls(**data)
-
-

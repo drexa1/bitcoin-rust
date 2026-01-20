@@ -1,10 +1,9 @@
 from dataclasses import dataclass
-from pathlib import Path
 from typing import List
 from uuid import UUID
-import cbor2
 from pydantic import BaseModel
 from lib.src.types.py.crypto import Signature, PublicKey, Hash
+from lib.src.types.py.util import CBORSerializable
 
 
 @dataclass
@@ -25,19 +24,9 @@ class TransactionOutput(BaseModel):
     def hash(self) -> Hash:
         return Hash.hash(self)
 
-class Transaction(BaseModel):
+class Transaction(BaseModel, CBORSerializable):
     inputs: List[TransactionInput]
     outputs: List[TransactionOutput]
 
     def hash(self) -> Hash:
         return Hash.hash(self)
-
-    def save(self, filename: Path):
-        with open(filename, "wb") as f:
-            cbor2.dump(self.model_dump(), f)
-
-    @classmethod
-    def load(cls, filename: Path) -> "Transaction":
-        with open(filename, "rb") as f:
-            data = cbor2.load(f)
-        return cls(**data)
