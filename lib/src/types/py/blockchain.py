@@ -1,12 +1,12 @@
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import List, Tuple
+from typing import Tuple
 import cbor2
 from pydantic import BaseModel, Field
-from block import Block
-from crypto import Hash, MerkleRoot
-from error import InvalidTransaction, InvalidBlock, InvalidMerkleRoot
-from transaction import TransactionOutput, Transaction
+from lib.src.types.py.error import InvalidTransaction, InvalidBlock, InvalidMerkleRoot
+from lib.src.types.py.block import Block
+from lib.src.types.py.crypto import Hash, MerkleRoot
+from lib.src.types.py.transaction import TransactionOutput, Transaction
 
 MIN_TARGET: int = (
     0xFFFF_FFFF_FFFF_FFFF << 192 |  # highest 64 bits
@@ -22,8 +22,8 @@ MAX_MEMPOOL_TRANSACTION_AGE = 3600
 class Blockchain(BaseModel):
     utxos: dict[Hash, Tuple[bool, TransactionOutput]] = Field(default_factory=dict)
     target: int = MIN_TARGET
-    blocks: List[Block] = Field(default_factory=list)
-    mempool: List[Tuple[datetime, Transaction]] = Field(default_factory=list)
+    blocks: list[Block] = Field(default_factory=list)
+    mempool: list[Tuple[datetime, Transaction]] = Field(default_factory=list)
 
     def add_to_mempool(self, tx: Transaction):
         # Check inputs
@@ -54,8 +54,8 @@ class Blockchain(BaseModel):
         if total_input < total_output:
             raise InvalidTransaction()
         # Mark inputs as used
-        for inp in tx.inputs:
-            self.utxos[inp.prev_transaction_output_hash] = (True, self.utxos[inp.prev_transaction_output_hash][1])
+        for input in tx.inputs:
+            self.utxos[input.prev_transaction_output_hash] = (True, self.utxos[input.prev_transaction_output_hash][1])
         # Add to mempool
         self.mempool.append((datetime.now(timezone.utc), tx))
         # Sort by miner fee descending

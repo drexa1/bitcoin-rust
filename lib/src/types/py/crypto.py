@@ -1,6 +1,7 @@
 import hashlib
 from dataclasses import dataclass
-from typing import Any, List
+from typing import Any
+
 import cbor2
 from ecdsa import SigningKey, VerifyingKey, SECP256k1, BadSignatureError  # noqa
 from pydantic import BaseModel, field_serializer, field_validator
@@ -11,11 +12,8 @@ class Hash:
     value: int
 
     @staticmethod
-    def hash(data: Any) -> "Hash":
-        """
-        Hash anything serializable via CBOR
-        """
-        serialized = cbor2.dumps(data)
+    def hash(data: BaseModel) -> "Hash":
+        serialized = cbor2.dumps(data.model_dump())
         digest = hashlib.sha256(serialized).digest()
         value = int.from_bytes(digest, byteorder="big", signed=False)
         return Hash(value)
@@ -47,7 +45,7 @@ class PublicKey(BaseModel):
 
     # Validator: hex string -> VerifyingKey
     @field_validator("key", mode="before")
-    def parse_key(cls, v):
+    def parse_key(cls, v):  # noqa
         if isinstance(v, str):
             return VerifyingKey.from_string(bytes.fromhex(v), curve=SECP256k1)
         return v
@@ -95,12 +93,12 @@ class MerkleRoot:
     hash: Hash
 
     @staticmethod
-    def calculate(transactions: List[Any]) -> "MerkleRoot":
-        layer: List[Hash] = [Hash.hash(tx) for tx in transactions]
+    def calculate(transactions: list[Any]) -> "MerkleRoot":
+        layer: list[Hash] = [Hash.hash(tx) for tx in transactions]
         if not layer:
             return MerkleRoot(Hash.zero())
         while len(layer) > 1:
-            new_layer: List[Hash] = []
+            new_layer: list[Hash] = []
             for i in range(0, len(layer), 2):
                 left = layer[i]
                 right = layer[i + 1] if i + 1 < len(layer) else layer[i]

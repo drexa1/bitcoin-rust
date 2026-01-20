@@ -1,9 +1,10 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import List
 from uuid import UUID
 import cbor2
 from pydantic import BaseModel
-from crypto import Signature, PublicKey, Hash
+from lib.src.types.py.crypto import Signature, PublicKey, Hash
 
 
 @dataclass
@@ -31,12 +32,12 @@ class Transaction(BaseModel):
     def hash(self) -> Hash:
         return Hash.hash(self)
 
-    def save(self, filename: str):
+    def save(self, filename: Path):
         with open(filename, "wb") as f:
             cbor2.dump(self.model_dump(), f)
 
     @classmethod
-    def load(cls, filename: str) -> "Transaction":
+    def load(cls, filename: Path) -> "Transaction":
         with open(filename, "rb") as f:
             data = cbor2.load(f)
         return cls(**data)

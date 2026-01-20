@@ -22,4 +22,5 @@ fn main() {
         }],
     );
     transaction.save_to_file(path).expect("Failed to save transaction");
+    println!("Done");
 }

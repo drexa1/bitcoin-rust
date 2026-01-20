@@ -1,12 +1,12 @@
-from __future__ import annotations
-from typing import List, Dict, Tuple
 from datetime import datetime, timezone
-from pydantic import BaseModel
-import cbor2
 from io import BytesIO
-from crypto import Hash, MerkleRoot
-from lib.src.types.transaction import Transaction, TransactionOutput
-from error import InvalidTransaction, InvalidSignature
+from pathlib import Path
+from typing import Tuple
+import cbor2
+from pydantic import BaseModel
+from lib.src.types.py.crypto import Hash, MerkleRoot
+from lib.src.types.py.error import InvalidTransaction, InvalidSignature
+from lib.src.types.py.transaction import Transaction, TransactionOutput
 
 INITIAL_REWARD = 50
 HALVING_INTERVAL = 210000
@@ -36,7 +36,7 @@ class BlockHeader(BaseModel):
 
 class Block(BaseModel):
     header: BlockHeader
-    transactions: List[Transaction]
+    transactions: list[Transaction]
 
     def hash(self) -> Hash:
         return Hash.hash(self)
@@ -44,7 +44,7 @@ class Block(BaseModel):
     def verify_transactions(
             self,
             predicted_block_height: int,
-            utxos: Dict[Hash, Tuple[bool, TransactionOutput]]
+            utxos: dict[Hash, Tuple[bool, TransactionOutput]]
     ) -> None:
         if not self.transactions:
             raise ValueError("InvalidTransaction: empty block")
@@ -70,7 +70,7 @@ class Block(BaseModel):
     def verify_coinbase_transaction(
             self,
             predicted_block_height: int,
-            utxos: Dict[Hash, Tuple[bool, TransactionOutput]]
+            utxos: dict[Hash, Tuple[bool, TransactionOutput]]
     ) -> None:
         coinbase_tx = self.transactions[0]
         if coinbase_tx.inputs:
@@ -85,10 +85,10 @@ class Block(BaseModel):
 
     def calculate_miner_fees(
             self,
-            utxos: Dict[Hash, Tuple[bool, TransactionOutput]]
+            utxos: dict[Hash, Tuple[bool, TransactionOutput]]
     ) -> int:
-        inputs: Dict[Hash, TransactionOutput] = {}
-        outputs: Dict[Hash, TransactionOutput] = {}
+        inputs: dict[Hash, TransactionOutput] = {}
+        outputs: dict[Hash, TransactionOutput] = {}
         for tx in self.transactions[1:]:
             for tx_in in tx.inputs:
                 prev_output = utxos.get(tx_in.prev_transaction_output_hash)
@@ -107,15 +107,14 @@ class Block(BaseModel):
         total_output = sum(o.value for o in outputs.values())
         return total_input - total_output
 
-    @classmethod
-    def load(cls, reader: BytesIO) -> Block:
-        try:
-            return cbor2.load(reader)
-        except Exception:
-            raise ValueError("Failed to deserialize")
+    def save(self, filename: Path) -> None:
+        with open(filename, "wb") as f:
+            cbor2.dump(self.model_dump(), f)
 
-    def save(self, writer: BytesIO) -> None:
-        try:
-            cbor2.dump(self.model_dump(), writer)
-        except Exception:
-            raise ValueError("Failed to serialize")
+    @classmethod
+    def load(cls, filename: Path) -> "Block":
+        with open(filename, "rb") as f:
+            data = cbor2.load(f)
+        return cls(**data)
+
+
