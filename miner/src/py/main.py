@@ -12,13 +12,13 @@ def main():
     args = parser.parse_args()
 
     orig_block: Block = Block.load(args.block_file)
+    print("Original block:", orig_block)
+    print("Hash:", orig_block.header.hash())
+
     block: Block = copy.deepcopy(orig_block)
-    print(f"Block target = {block.header.target}")
     while not block.header.mine(args.steps):
         print(f"mining... nonce={block.header.nonce}")
 
-    print("Original block:", orig_block)
-    print("Hash:", orig_block.header.hash())
     print("Final block:", block)
     print("Hash:", block.header.hash())
 
