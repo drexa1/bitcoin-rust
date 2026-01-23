@@ -2,3 +2,5 @@
 /runConfigurations
 /target
 Cargo.lock
+*.priv.cbor
+*.pub.cbor
