@@ -1,3 +1,4 @@
+import json
 import sys
 from pathlib import Path
 from lib.src.types.py.transaction import Transaction
@@ -14,7 +15,8 @@ def main():
         tx = Transaction.load(path)
     except Exception:
         raise RuntimeError("Failed to load transaction")
-    print(tx)
+    pretty_tx = json.dumps(tx.model_dump(), indent=4, default=str)
+    print(pretty_tx)
 
 
 if __name__ == "__main__":
