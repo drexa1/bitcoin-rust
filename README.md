@@ -8,7 +8,7 @@ However, what I decided to do here, was to write side-by-side versions of the Ru
 + a) because it serves me as a Rosetta stone to understand that "thing A" in Rust is just the same as "thing B" in Python. With Rust's sometimes abbreviated and algebraic syntax, it becomes easier to recognize: "okay, this is just ..."  
 
 
-+ b) because I’m finding hard to buy the two main arguments for the Rust hype: security and speed.
++ b) because I’m finding hard to buy the two main arguments for the Rust hype: **security** and **speed**.
 
 About security, there is a plethora of safety nets in almost every programming language to avoid side effects. Just write immutable code!  
 The argument I read goes like: "yeah, but you have to be disciplined about it... and with Rust, the compiler forces you."  
