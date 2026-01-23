@@ -8,12 +8,7 @@ from lib.src.types.py.block import Block
 from lib.src.types.py.crypto import Hash, MerkleRoot
 from lib.src.types.py.transaction import TransactionOutput, Transaction
 
-MIN_TARGET: int = (
-    0xFFFF_FFFF_FFFF_FFFF << 192 |  # highest 64 bits
-    0xFFFF_FFFF_FFFF_FFFF << 128 |
-    0xFFFF_FFFF_FFFF_FFFF << 64  |
-    0x0000_FFFF_FFFF_FFFF         # lowest 64 bits
-)
+MIN_TARGET = 2**239  # Moderate
 DIFFICULTY_UPDATE_INTERVAL = 10
 IDEAL_BLOCK_TIME = 600
 MAX_MEMPOOL_TRANSACTION_AGE = 3600
@@ -23,30 +18,30 @@ class Blockchain(BaseModel):
     utxos: dict[Hash, Tuple[bool, TransactionOutput]] = Field(default_factory=dict)
     target: int = MIN_TARGET
     blocks: list[Block] = Field(default_factory=list)
-    mempool: list[Tuple[datetime, Transaction]] = Field(default_factory=list)
+    mempool: list[tuple[datetime, Transaction]] = Field(default_factory=list)
 
     def add_to_mempool(self, tx: Transaction):
         # Check inputs
         known_inputs = set()
-        for input in tx.inputs:
-            if input.prev_transaction_output_hash not in self.utxos:
+        for tx_in in tx.inputs:
+            if tx_in.prev_transaction_output_hash not in self.utxos:
                 raise InvalidTransaction()
-            if input.prev_transaction_output_hash in known_inputs:
+            if tx_in.prev_transaction_output_hash in known_inputs:
                 raise InvalidTransaction()
-            known_inputs.add(input.prev_transaction_output_hash)
+            known_inputs.add(tx_in.prev_transaction_output_hash)
             # Handle UTXOs already marked in mempool
-            marked, _ = self.utxos[input.prev_transaction_output_hash]
+            marked, _ = self.utxos[tx_in.prev_transaction_output_hash]
             if marked:
                 # find the transaction that references it
                 for idx, (_, mtx) in enumerate(self.mempool):
-                    if any(o.hash() == input.prev_transaction_output_hash for o in mtx.outputs):
+                    if any(o.hash() == tx_in.prev_transaction_output_hash for o in mtx.outputs):
                         # unmark all its inputs
                         for mi in mtx.inputs:
                             self.utxos[mi.prev_transaction_output_hash] = (False, self.utxos[mi.prev_transaction_output_hash][1])
                         self.mempool.pop(idx)
                         break
                 else:
-                    self.utxos[input.prev_transaction_output_hash] = (False, self.utxos[input.prev_transaction_output_hash][1])
+                    self.utxos[tx_in.prev_transaction_output_hash] = (False, self.utxos[tx_in.prev_transaction_output_hash][1])
 
         # Check inputs vs outputs
         total_input = sum(self.utxos[i.prev_transaction_output_hash][1].value for i in tx.inputs)
@@ -54,8 +49,8 @@ class Blockchain(BaseModel):
         if total_input < total_output:
             raise InvalidTransaction()
         # Mark inputs as used
-        for input in tx.inputs:
-            self.utxos[input.prev_transaction_output_hash] = (True, self.utxos[input.prev_transaction_output_hash][1])
+        for tx_in in tx.inputs:
+            self.utxos[tx_in.prev_transaction_output_hash] = (True, self.utxos[tx_in.prev_transaction_output_hash][1])
         # Add to mempool
         self.mempool.append((datetime.now(timezone.utc), tx))
         # Sort by miner fee descending

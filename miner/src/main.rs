@@ -21,8 +21,9 @@ fn main() {
     };
     let og_block = Block::load_from_file(path).expect("Failed to load block");
     let mut block = og_block.clone();
+    println!("Block target: {:#?}", block.header.target);
     while !block.header.mine(steps) {
-        println!("mining...");
+        println!("mining... nonce={:#?}", block.header.nonce)
     }
     // Print original block and its hash
     println!("original: {:#?}", og_block);

@@ -13,6 +13,7 @@ def main():
 
     orig_block: Block = Block.load(args.block_file)
     block: Block = copy.deepcopy(orig_block)
+    print(f"Block target = {block.header.target}")
     while not block.header.mine(args.steps):
         print(f"mining... nonce={block.header.nonce}")
 
