@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 from typing import Tuple
 from pydantic import BaseModel
@@ -39,11 +40,7 @@ class Block(BaseModel, CBORSerializable):
     def hash(self) -> Hash:
         return Hash.hash(self)
 
-    def verify_transactions(
-            self,
-            predicted_block_height: int,
-            utxos: dict[Hash, Tuple[bool, TransactionOutput]]
-    ) -> None:
+    def verify_transactions(self, predicted_block_height: int, utxos: dict[Hash, Tuple[bool, TransactionOutput]]) -> None:
         if not self.transactions:
             raise ValueError("InvalidTransaction: empty block")
         self.verify_coinbase_transaction(predicted_block_height, utxos)
@@ -65,11 +62,7 @@ class Block(BaseModel, CBORSerializable):
             if input_value < output_value:
                 raise InvalidTransaction()
 
-    def verify_coinbase_transaction(
-            self,
-            predicted_block_height: int,
-            utxos: dict[Hash, Tuple[bool, TransactionOutput]]
-    ) -> None:
+    def verify_coinbase_transaction(self, predicted_block_height: int, utxos: dict[Hash, Tuple[bool, TransactionOutput]]) -> None:
         coinbase_tx = self.transactions[0]
         if coinbase_tx.inputs:
             raise InvalidTransaction()
@@ -81,10 +74,7 @@ class Block(BaseModel, CBORSerializable):
         if total_outputs != block_reward + miner_fees:
             raise InvalidTransaction()
 
-    def calculate_miner_fees(
-            self,
-            utxos: dict[Hash, Tuple[bool, TransactionOutput]]
-    ) -> int:
+    def calculate_miner_fees(self, utxos: dict[Hash, Tuple[bool, TransactionOutput]]) -> int:
         inputs: dict[Hash, TransactionOutput] = {}
         outputs: dict[Hash, TransactionOutput] = {}
         for tx in self.transactions[1:]:
@@ -104,3 +94,6 @@ class Block(BaseModel, CBORSerializable):
         total_input = sum(o.value for o in inputs.values())
         total_output = sum(o.value for o in outputs.values())
         return total_input - total_output
+
+    def __str__(self):
+        return json.dumps(self.model_dump(), indent=4, default=str)

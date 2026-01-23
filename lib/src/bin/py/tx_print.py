@@ -1,22 +1,14 @@
-import json
-import sys
+import argparse
 from pathlib import Path
 from lib.src.types.py.transaction import Transaction
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: tx_print <tx_file>")
-        sys.exit(1)
-    path = Path(sys.argv[1])
-    if not path.is_absolute():
-        path = Path(__file__).parent / path
-    try:
-        tx = Transaction.load(path)
-    except Exception:
-        raise RuntimeError("Failed to load transaction")
-    pretty_tx = json.dumps(tx.model_dump(), indent=4, default=str)
-    print(pretty_tx)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("tx_file", type=Path, help="Path to the transaction file")
+    args = parser.parse_args()
+    tx = Transaction.load(args.tx_file)
+    print(tx)
 
 
 if __name__ == "__main__":

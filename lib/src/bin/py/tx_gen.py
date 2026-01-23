@@ -1,4 +1,4 @@
-import sys
+import argparse
 import uuid
 from pathlib import Path
 from lib.src.types.py.crypto import PrivateKey
@@ -6,12 +6,11 @@ from lib.src.types.py.transaction import Transaction, TransactionOutput
 from lib.src.types.py.block import INITIAL_REWARD
 
 
-# @timeit_sync(runs=5, workers=2)
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: tx_gen <tx_file>")
-        sys.exit(1)
-    path = Path(sys.argv[1])
+    parser = argparse.ArgumentParser(description="Generate a new transaction and save it to a file.")
+    parser.add_argument("tx_file", type=Path, help="Path to save the transaction")
+    args = parser.parse_args()
+
     private_key = PrivateKey.new_key()
     transaction = Transaction(
         inputs=[],
@@ -21,8 +20,9 @@ def main():
             public_key=private_key.public_key()
         )]
     )
-    transaction.save(path)
-    print("Done")
+
+    transaction.save(args.tx_file)
+    print("Tx saved")
 
 
 if __name__ == "__main__":

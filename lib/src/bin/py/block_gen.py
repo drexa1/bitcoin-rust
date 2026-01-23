@@ -1,4 +1,4 @@
-import sys
+import argparse
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -9,16 +9,16 @@ from lib.src.types.py.transaction import Transaction, TransactionOutput
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: block_gen <block_file>", file=sys.stderr)
-        sys.exit(1)
-    path = Path(sys.argv[1])
+    parser = argparse.ArgumentParser()
+    parser.add_argument("block_file", type=Path, help="Path to save the new block")
+    args = parser.parse_args()
+
     private_key = PrivateKey.new_key()
     transactions = [Transaction(
         inputs=[],
         outputs=[TransactionOutput(
             unique_id=uuid4(),
-            value=INITIAL_REWARD * (10 ** 8),
+            value=INITIAL_REWARD * (10 ** 8),  # Sats
             public_key=private_key.public_key()
         )]
     )]
@@ -30,7 +30,9 @@ def main():
         merkle_root=merkle_root,
         target=MIN_TARGET,
     ), transactions=transactions)
-    block.save(path)
+
+    block.save(args.block_file)
+    print("Block saved")
 
 
 if __name__ == "__main__":

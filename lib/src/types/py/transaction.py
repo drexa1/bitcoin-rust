@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 from typing import List
 from uuid import UUID
@@ -30,3 +31,6 @@ class Transaction(BaseModel, CBORSerializable):
 
     def hash(self) -> Hash:
         return Hash.hash(self)
+
+    def __str__(self):
+        return json.dumps(self.model_dump(), indent=4, default=str)
