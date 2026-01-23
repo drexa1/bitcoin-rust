@@ -1,16 +1,23 @@
-use std::fmt;
+use crate::types::Transaction;
+use crate::util::Saveable;
 use ecdsa::{
+    signature::{Signer, Verifier},
     Signature as ECDSASignature,
     SigningKey,
-    VerifyingKey,
-    signature::{Signer, Verifier}
+    VerifyingKey
 };
-use k256::Secp256k1;
 use k256::elliptic_curve::rand_core::OsRng;
+use k256::Secp256k1;
 use primitive_types::U256;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use sha256::digest;
-use crate::types::Transaction;
+use spki::EncodePublicKey;
+use std::fmt;
+use std::io::{
+    Error as IoError, ErrorKind as IoErrorKind, Read,
+    Result as IoResult, Write,
+};
+
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub struct Hash(U256);
@@ -64,6 +71,25 @@ impl Signature {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PublicKey(VerifyingKey<Secp256k1>);
+// Save and load as PEM
+impl Saveable for PublicKey {
+    fn load<I: Read>(mut reader: I) -> IoResult<Self> {
+        // Read PEM-encoded public key into string
+        let mut buf = String::new();
+        reader.read_to_string(&mut buf)?;
+        // Decode the public key from PEM
+        let public_key = buf.parse().map_err(|_| {
+            IoError::new(IoErrorKind::InvalidData, "Failed to parse PublicKey")
+        })?;
+        Ok(PublicKey(public_key))
+    }
+    fn save<O: Write>(&self, mut writer: O) -> IoResult<()> {
+        let s = self.0.to_public_key_pem(Default::default()).map_err(|_| {
+            IoError::new(IoErrorKind::InvalidData, "Failed to serialize PublicKey")
+        })?;
+        writer.write_all(s.as_bytes())
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PrivateKey(
@@ -76,6 +102,18 @@ impl PrivateKey {
     }
     pub fn public_key(&self) -> PublicKey {
         PublicKey(self.0.verifying_key().clone())
+    }
+}
+impl Saveable for PrivateKey {
+    fn load<I: Read>(reader: I) -> IoResult<Self> {
+        ciborium::de::from_reader(reader).map_err(|_| {
+            IoError::new(IoErrorKind::InvalidData, "Failed to deserialize PrivateKey")
+        })
+    }
+    fn save<O: Write>(&self, writer: O) -> IoResult<()> {
+        ciborium::ser::into_writer(self, writer).map_err(|_| {
+            IoError::new(IoErrorKind::InvalidData, "Failed to serialize PrivateKey")
+        })
     }
 }
 

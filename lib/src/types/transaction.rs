@@ -25,13 +25,13 @@ impl Transaction {
 impl Saveable for Transaction {
     fn load<I: Read>(reader: I) -> IoResult<Self> {
         ciborium::de::from_reader(reader).map_err(|_| {
-            IoError::new(IoErrorKind::InvalidData, "Failed to deserialize")
+            IoError::new(IoErrorKind::InvalidData, "Failed to deserialize Transaction")
         })
     }
 
     fn save<O: Write>(&self, writer: O) -> IoResult<()> {
         ciborium::ser::into_writer(self, writer).map_err(|_| {
-            IoError::new(IoErrorKind::InvalidData, "Failed to serialize")
+            IoError::new(IoErrorKind::InvalidData, "Failed to serialize Transaction")
         })
     }
 }

@@ -36,5 +36,5 @@ fn main() {
         ), transactions
     );
     block.save_to_file(path).expect("Failed to save block");
-    println!("Done");
+    println!("Saved");
 }

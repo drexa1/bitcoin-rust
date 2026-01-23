@@ -1,10 +1,11 @@
 import hashlib
 from dataclasses import dataclass
-from typing import Any
-
+from pathlib import Path
+from typing import Iterable
 import cbor2
 from ecdsa import SigningKey, VerifyingKey, SECP256k1, BadSignatureError  # noqa
 from pydantic import BaseModel, field_serializer, field_validator
+from lib.src.types.py.util import CBORSerializable
 
 
 @dataclass(frozen=True)
@@ -12,7 +13,7 @@ class Hash:
     value: int
 
     @staticmethod
-    def hash(data: BaseModel) -> "Hash":
+    def hash(data: BaseModel | Iterable["Hash"]) -> "Hash":
         serialized = cbor2.dumps(data.model_dump())
         digest = hashlib.sha256(serialized).digest()
         value = int.from_bytes(digest, byteorder="big", signed=False)
@@ -50,11 +51,25 @@ class PublicKey(BaseModel):
             return VerifyingKey.from_string(bytes.fromhex(v), curve=SECP256k1)
         return v
 
+    def save(self, filename: Path) -> None:
+        with open(filename, "wb") as f:
+            f.write(self.key.to_pem())
+
+    @classmethod
+    def load(cls, filename: Path) -> "PublicKey":
+        with open(filename, "r") as f:
+            pem = f.read()
+        return cls(key=VerifyingKey.from_pem(pem))
+
 
 
 @dataclass
-class PrivateKey:
+class PrivateKey(BaseModel, CBORSerializable):
     key: SigningKey
+
+    model_config = {
+        "arbitrary_types_allowed": True
+    }
 
     @staticmethod
     def new_key() -> "PrivateKey":
@@ -91,17 +106,18 @@ class Signature:
 @dataclass(frozen=True)
 class MerkleRoot:
     hash: Hash
+    from lib.src.types.py.transaction import Transaction
 
     @staticmethod
-    def calculate(transactions: list[Any]) -> "MerkleRoot":
+    def calculate(transactions: list[Transaction]) -> "MerkleRoot":
         layer: list[Hash] = [Hash.hash(tx) for tx in transactions]
         if not layer:
             return MerkleRoot(Hash.zero())
         while len(layer) > 1:
             new_layer: list[Hash] = []
             for i in range(0, len(layer), 2):
-                left = layer[i]
-                right = layer[i + 1] if i + 1 < len(layer) else layer[i]
-                new_layer.append(Hash.hash([left.value, right.value]))
+                left: Hash = layer[i]
+                right: Hash = layer[i + 1] if i + 1 < len(layer) else layer[i]
+                new_layer.append(Hash.hash([left, right]))
             layer = new_layer
         return MerkleRoot(layer[0])
