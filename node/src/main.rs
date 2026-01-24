@@ -56,6 +56,7 @@ async fn main() -> Result<()> {
             }
         }
     }
+
     // Start the listener
     let addr = format!("0.0.0.0:{}", port);
     let listener = TcpListener::bind(&addr).await?;
