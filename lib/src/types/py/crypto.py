@@ -1,7 +1,7 @@
 import hashlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Any
 import cbor2
 from ecdsa import SigningKey, VerifyingKey, SECP256k1, BadSignatureError  # noqa
 from pydantic import BaseModel, field_serializer, field_validator
@@ -64,7 +64,7 @@ class PublicKey(BaseModel):
 
 
 @dataclass
-class PrivateKey(BaseModel, CBORSerializable):
+class PrivateKey(CBORSerializable):
     key: SigningKey
 
     model_config = {
@@ -106,10 +106,9 @@ class Signature:
 @dataclass(frozen=True)
 class MerkleRoot:
     hash: Hash
-    from lib.src.types.py.transaction import Transaction
 
     @staticmethod
-    def calculate(transactions: list[Transaction]) -> "MerkleRoot":
+    def calculate(transactions: list[Any]) -> "MerkleRoot":  # list[Transaction] but just to avoid circular import
         layer: list[Hash] = [Hash.hash(tx) for tx in transactions]
         if not layer:
             return MerkleRoot(Hash.zero())

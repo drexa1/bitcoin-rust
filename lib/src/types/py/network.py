@@ -3,8 +3,9 @@ from asyncio import StreamWriter, StreamReader
 from typing import List, Tuple, Union
 import cbor2
 from pydantic import BaseModel
-from crypto import PublicKey
-from lib.src.types.py import Block, Transaction, TransactionOutput
+from lib.src.types.py.crypto import PublicKey
+from lib.src.types.py.block import Block
+from lib.src.types.py.transaction import Transaction, TransactionOutput
 
 
 class FetchUTXOs(BaseModel):

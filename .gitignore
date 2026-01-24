@@ -1,4 +1,5 @@
 /.idea/
+/.run/
 /runConfigurations
 /target
 Cargo.lock

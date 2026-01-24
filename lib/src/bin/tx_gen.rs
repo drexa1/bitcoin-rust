@@ -1,17 +1,19 @@
 use btclib::crypto::PrivateKey;
 use btclib::types::{Transaction, TransactionOutput};
 use btclib::util::Saveable;
+use clap::Parser;
 use uuid::Uuid;
-use std::env;
-use std::process::exit;
+
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    #[arg(short, long)]
+    tx_file: String
+}
 
 fn main() {
-    let path = if let Some(arg) = env::args().nth(1) {
-        arg
-    } else {
-        eprintln!("Usage: tx_gen <tx_file>");
-        exit(1);
-    };
+    let cli = Cli::parse();
+
     let private_key = PrivateKey::new_key();
     let transaction = Transaction::new(
         vec![],
@@ -21,6 +23,7 @@ fn main() {
             public_key: private_key.public_key(),
         }],
     );
-    transaction.save_to_file(path).expect("Failed to save transaction");
+
+    transaction.save_to_file(cli.tx_file).expect("Failed to save transaction");
     println!("Saved");
 }

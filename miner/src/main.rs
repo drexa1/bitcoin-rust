@@ -12,7 +12,7 @@ struct Cli {
     #[arg(short, long)]
     address: String,
     #[arg(short, long)]
-    public_key_file: String,
+    public_key_file: String
 }
 
 #[tokio::main]

@@ -10,7 +10,7 @@ from lib.src.types.py.transaction import Transaction, TransactionOutput
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("block_file", type=Path, help="Path to save the new block")
+    parser.add_argument("-f", "--block-file", type=Path, help="Path to save the new block", required=True)
     args = parser.parse_args()
 
     private_key = PrivateKey.new_key()

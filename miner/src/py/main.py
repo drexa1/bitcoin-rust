@@ -1,7 +1,7 @@
 import asyncio
 import argparse
+from miner import Miner
 from lib.src.types.py.crypto import PublicKey
-from miner.src.py.miner import Miner
 
 
 async def main():

@@ -1,17 +1,18 @@
 use btclib::types::Block;
 use btclib::util::Saveable;
-use std::env;
+use clap::Parser;
 use std::fs::File;
-use std::process::exit;
+
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    #[arg(short, long)]
+    block_file: String
+}
 
 fn main() {
-    let path = if let Some(arg) = env::args().nth(1) {
-        arg
-    } else {
-        eprintln!("Usage: block_print <block_file>");
-        exit(1);
-    };
-    if let Ok(file) = File::open(path) {
+    let cli = Cli::parse();
+    if let Ok(file) = File::open(cli.block_file) {
         let block = Block::load(file).expect("Failed to load block");
         println!("{:#?}", block);
     }

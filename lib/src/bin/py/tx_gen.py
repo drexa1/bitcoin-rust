@@ -8,7 +8,7 @@ from lib.src.types.py.block import INITIAL_REWARD
 
 def main():
     parser = argparse.ArgumentParser(description="Generate a new transaction and save it to a file.")
-    parser.add_argument("tx_file", type=Path, help="Path to save the transaction")
+    parser.add_argument("-f", "--tx-file", type=Path, help="Path to save the transaction")
     args = parser.parse_args()
 
     private_key = PrivateKey.new_key()

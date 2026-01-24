@@ -1,17 +1,18 @@
 use btclib::types::Transaction;
 use btclib::util::Saveable;
-use std::env;
+use clap::Parser;
 use std::fs::File;
-use std::process::exit;
+
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    #[arg(short, long)]
+    tx_file: String
+}
 
 fn main() {
-    let path = if let Some(arg) = env::args().nth(1) {
-        arg
-    } else {
-        eprintln!("Usage: tx_print <tx_file>");
-        exit(1);
-    };
-    if let Ok(file) = File::open(path) {
+    let cli = Cli::parse();
+    if let Ok(file) = File::open(cli.tx_file) {
         let tx = Transaction::load(file).expect("Failed to load transaction");
         println!("{:#?}", tx);
     }
