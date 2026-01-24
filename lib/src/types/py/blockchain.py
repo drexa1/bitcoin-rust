@@ -7,6 +7,7 @@ from lib.src.types.py.error import InvalidTransaction, InvalidBlock, InvalidMerk
 from lib.src.types.py.block import Block
 from lib.src.types.py.crypto import Hash, MerkleRoot
 from lib.src.types.py.transaction import TransactionOutput, Transaction
+from lib.src.types.py.util import CBORSerializable
 
 MIN_TARGET = 2**239  # Moderate
 DIFFICULTY_UPDATE_INTERVAL = 10
@@ -14,7 +15,7 @@ IDEAL_BLOCK_TIME = 600
 MAX_MEMPOOL_TRANSACTION_AGE = 3600
 
 
-class Blockchain(BaseModel):
+class Blockchain(BaseModel, CBORSerializable):
     utxos: dict[Hash, Tuple[bool, TransactionOutput]] = Field(default_factory=dict)
     target: int = MIN_TARGET
     blocks: list[Block] = Field(default_factory=list)

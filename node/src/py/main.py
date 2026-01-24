@@ -1,6 +1,6 @@
 import asyncio
 import argparse
-import os
+from pathlib import Path
 import node.src.py.util as util
 import node.src.py.message_handler as message_handler
 
@@ -11,14 +11,14 @@ async def main():
     parser.add_argument("-f", "--blockchain-file", type=str, help="Path to blockchain file")
     parser.add_argument("nodes", nargs="*", help="Known nodes to connect to")
     args = parser.parse_args()
-    port = args.port
-    blockchain_file = args.blockchain_file
+    port = int(args.port)
+    blockchain_file = Path(args.blockchain_file)
     nodes = args.nodes
 
     await util.populate_connections(nodes)
     print(f"Known nodes: {len(util.NODES)}")
     # Check if the blockchain_file exists
-    if os.path.exists(blockchain_file):
+    if blockchain_file.exists():
         await util.load_blockchain(blockchain_file)
     else:
         print("Blockchain file does not exist!")
@@ -40,7 +40,7 @@ async def main():
     server = await asyncio.start_server(message_handler.handle, "0.0.0.0", port)
     print(f"Listening on 0.0.0.0:{port}")
     # Start background tasks
-    asyncio.create_task(util.cleanup())
+    asyncio.create_task(util.mempool_cleanup())
     asyncio.create_task(util.save(blockchain_file))
     async with server:
         await server.serve_forever()

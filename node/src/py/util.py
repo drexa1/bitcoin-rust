@@ -1,6 +1,7 @@
 import asyncio
 from asyncio import StreamReader, StreamWriter
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Dict, Tuple
 from lib.src.types.py.blockchain import Blockchain
 from lib.src.types.py.network import (
@@ -13,10 +14,10 @@ BLOCKCHAIN = Blockchain()
 NODES: Dict[str, Tuple[StreamReader, StreamWriter]] = {}
 
 
-async def load_blockchain(blockchain_file: str) -> None:
+async def load_blockchain(blockchain_file: Path) -> None:
     """ Load blockchain from file and rebuild UTXOs. """
     print("Blockchain file exists, loading...")
-    new_blockchain = Blockchain.load(blockchain_file)
+    new_blockchain = Blockchain.load_from_file(blockchain_file)
     print("Blockchain loaded")
     global BLOCKCHAIN
     BLOCKCHAIN = new_blockchain
@@ -88,12 +89,12 @@ async def download_blockchain(node: str, count: int) -> None:
             print(f"Unexpected message from {node}")
 
 
-async def cleanup() -> None:
+async def mempool_cleanup() -> None:
     """ Periodically clean up old transactions from mempool. """
     while True:
         await asyncio.sleep(30)
         now = datetime.now(timezone.utc)
-        print(f"{now.strftime('%Y-%m-%d %H:%M:%S')}> Cleaning mempool old transactions")
+        print(f"{now.strftime('%Y-%m-%d %H:%M:%S')}> Cleaning mempool old transactions...")
         global BLOCKCHAIN
         BLOCKCHAIN.cleanup_mempool()
 

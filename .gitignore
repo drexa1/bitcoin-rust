@@ -3,7 +3,7 @@
 /.vscode/
 /runConfigurations
 /target
-/node/resources/blockchain.cbor
+/node/resources/blockchain-rs.cbor
 Cargo.lock
 *.priv.cbor
 *.pub.pem

@@ -62,7 +62,7 @@ async fn main() -> Result<()> {
     let listener = TcpListener::bind(&addr).await?;
     println!("Listening on {}", addr);
     // Start a task to periodically clean up the mempool
-    tokio::spawn(util::cleanup());
+    tokio::spawn(util::mempool_cleanup());
     // and a task to periodically save the blockchain
     tokio::spawn(util::save(blockchain_file.clone()));
     loop {

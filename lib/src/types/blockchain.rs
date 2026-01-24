@@ -214,7 +214,7 @@ impl Blockchain {
             .expect("BUG: impossible")
             * (BigDecimal::from(time_diff_seconds)
             / BigDecimal::from(target_seconds));
-        // Cut off decimal point and everything after it from string representation of new_target
+        // Cut off the decimal point and everything after it from string representation of new_target
         let new_target_str = new_target.to_string().split(".").next().expect("Expected a decimal point").to_owned();
         let new_target: U256 = U256::from_str_radix(&new_target_str, 10).expect("Should never happen");
         // Clamp new_target to be within the range of 4 * self.target and self.target / 4
@@ -225,7 +225,7 @@ impl Blockchain {
         } else {
             new_target
         };
-        // If new target is more than the minimum target, set it to the minimum target
+        // If the new target is more than the minimum target, set it to the minimum target
         self.target = new_target.min(crate::MIN_TARGET);
     }
 

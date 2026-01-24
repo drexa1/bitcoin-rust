@@ -17,7 +17,7 @@ pub async fn load_blockchain(blockchain_file: &str) -> Result<()> {
     println!("Checking if target needs to be adjusted...");
     println!("Current target: {}", blockchain.target());
     blockchain.try_adjust_target();
-    println!("New target: {}", blockchain.target());
+    println!("New target    : {}", blockchain.target());  // Indent with previous
     println!("Initialization complete");
     Ok(())
 }
@@ -98,11 +98,11 @@ pub(crate) async fn download_blockchain(node: &str, count: u32) -> Result<()> {
     Ok(())
 }
 
-pub async fn cleanup() {
+pub async fn mempool_cleanup() {
     let mut interval = time::interval(time::Duration::from_secs(30));
     loop {
         interval.tick().await;
-        println!("{}> Cleaning mempool old transactions", Utc::now().format("%Y-%m-%d %H:%M:%S"));
+        println!("{}> Cleaning mempool old transactions...", Utc::now().format("%Y-%m-%d %H:%M:%S"));
         let mut blockchain = crate::BLOCKCHAIN.write().await;
         blockchain.cleanup_mempool();
     }
