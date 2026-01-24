@@ -1,5 +1,6 @@
 /.idea/
 /.run/
+/.vscode/
 /runConfigurations
 /target
 /node/resources/blockchain.cbor
