@@ -7,7 +7,7 @@ from lib.src.types.py.crypto import PublicKey
 async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--address", required=True, help="Node address (host:port)")
-    parser.add_argument("-p", "--public_key_file", required=True, help="Path to public key file")
+    parser.add_argument("-p", "--public-key-file", required=True, help="Path to public key file")
     args = parser.parse_args()
 
     try:
