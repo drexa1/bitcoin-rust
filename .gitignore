@@ -2,6 +2,7 @@
 /.run/
 /runConfigurations
 /target
+/node/resources/blockchain.cbor
 Cargo.lock
 *.priv.cbor
 *.pub.pem

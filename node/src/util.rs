@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use chrono::Utc;
 use tokio::net::TcpStream;
 use tokio::time;
 use btclib::network::Message;
@@ -101,7 +102,7 @@ pub async fn cleanup() {
     let mut interval = time::interval(time::Duration::from_secs(30));
     loop {
         interval.tick().await;
-        println!("Cleaning mempool old transactions");
+        println!("{}> Cleaning mempool old transactions", Utc::now().format("%Y-%m-%d %H:%M:%S"));
         let mut blockchain = crate::BLOCKCHAIN.write().await;
         blockchain.cleanup_mempool();
     }
@@ -111,7 +112,7 @@ pub async fn save(name: String) {
     let mut interval = time::interval(time::Duration::from_secs(15));
     loop {
         interval.tick().await;
-        println!("Saving blockchain to disk...");
+        println!("{}> Saving blockchain to disk...", Utc::now().format("%Y-%m-%d %H:%M:%S"));
         let blockchain = crate::BLOCKCHAIN.read().await;
         blockchain.save_to_file(name.clone()).unwrap();
     }
