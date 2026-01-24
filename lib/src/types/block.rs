@@ -132,7 +132,7 @@ pub struct BlockHeader {
     /// Number only used once, we increment it to mine the block
     pub nonce: u64,
     /// Hash of the previous block in the chain
-    pub prev_hash: Hash,
+    pub prev_block_hash: Hash,
     /// The hash of the Merkle tree root derived from all the transactions in this block.
     /// This ensures that all transactions are accounted for and unalterable without changing the header.
     pub merkle_root: MerkleRoot,
@@ -147,7 +147,7 @@ impl BlockHeader {
         merkle_root: MerkleRoot,
         target: U256
     ) -> Self {
-        BlockHeader { timestamp, nonce, prev_hash, merkle_root, target }
+        BlockHeader { timestamp, nonce, prev_block_hash: prev_hash, merkle_root, target }
     }
 
     pub fn hash(&self) -> Hash {

@@ -61,7 +61,7 @@ impl Signature {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct PublicKey(VerifyingKey<Secp256k1>);
 // Save and load as PEM
 impl Saveable for PublicKey {

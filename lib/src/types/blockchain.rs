@@ -155,14 +155,14 @@ impl Blockchain {
         // Check if the block is valid
         if self.blocks.is_empty() {
             // If first block, check if the prev block hash is all zeroes
-            if block.header.prev_hash != Hash::zero() {
+            if block.header.prev_block_hash != Hash::zero() {
                 println!("zero hash");
                 return Err(BtcError::InvalidBlock);
             }
         } else {
             // If not the first block, check if the prev block hash is the hash of the last block
             let last_block = self.blocks.last().unwrap();
-            if block.header.prev_hash != last_block.hash() {
+            if block.header.prev_block_hash != last_block.hash() {
                 println!("wrong prev hash");
                 return Err(BtcError::InvalidBlock);
             }
@@ -241,6 +241,12 @@ impl Blockchain {
                 }
             }
         }
+    }
+
+    pub fn calculate_block_reward(&self) -> u64 {
+        let block_height = self.block_height();
+        let halvings = block_height / crate::HALVING_INTERVAL;
+        (crate::INITIAL_REWARD * 10u64.pow(8)) >> halvings
     }
 }
 /// Save and load expecting CBOR from ciborium as format

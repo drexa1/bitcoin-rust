@@ -42,7 +42,7 @@ pub struct TransactionInput {
     pub signature: Signature
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct TransactionOutput {
     pub value: u64,
     pub unique_id: Uuid,

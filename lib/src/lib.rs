@@ -1,6 +1,7 @@
 use primitive_types::U256;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
 /// Initial reward in bitcoin - multiply by 10^8 to get Sats
 pub const INITIAL_REWARD: u64 = 50;
 /// Halving interval in blocks
@@ -18,6 +19,8 @@ pub const MIN_TARGET: U256 = U256([
 pub const DIFFICULTY_UPDATE_INTERVAL: u64 = 50;
 /// Max mempool transaction age in seconds
 pub const MAX_MEMPOOL_TRANSACTION_AGE: u64 = 600;
+/// maximum amount of transactions allowed in a block
+pub const BLOCK_TRANSACTION_CAP: usize = 20;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 pub mod crypto;
