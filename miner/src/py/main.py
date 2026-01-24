@@ -1,27 +1,23 @@
+import asyncio
 import argparse
-import copy
-from pathlib import Path
-from lib.src.types.py.block import Block
+from lib.src.types.py.crypto import PublicKey
+from miner.src.py.miner import Miner
 
 
-# @timeit_sync(runs=5, workers=2)
-def main():
+async def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("block_file", type=Path, help="Path to the block file")
-    parser.add_argument("steps", type=int, help="Number of mining steps")
+    parser.add_argument("-a", "--address", required=True, help="Node address (host:port)")
+    parser.add_argument("-p", "--public_key_file", required=True, help="Path to public key file")
     args = parser.parse_args()
 
-    orig_block: Block = Block.load(args.block_file)
-    print("Original block:", orig_block)
-    print("Hash:", orig_block.header.hash())
+    try:
+        public_key = PublicKey.load_from_file(args.public_key_file)
+    except Exception as e:
+        raise RuntimeError(f"Error reading public key: {e}")
 
-    block: Block = copy.deepcopy(orig_block)
-    while not block.header.mine(args.steps):
-        print(f"mining... nonce={block.header.nonce}")
-
-    print("Final block:", block)
-    print("Hash:", block.header.hash())
+    miner = await Miner.connect(args.address.split(":")[0], int(args.address.split(":")[1]), public_key)
+    await miner.run()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
