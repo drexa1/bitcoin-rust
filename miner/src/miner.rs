@@ -12,7 +12,7 @@ use btclib::types::Block;
 
 pub struct Miner {
     public_key: PublicKey,
-    stream: Mutex<TcpStream>,
+    conn: Mutex<TcpStream>,
     current_template: Arc<std::sync::Mutex<Option<Block>>>,
     mining: Arc<AtomicBool>,
     mined_block_sender: flume::Sender<Block>,
@@ -24,7 +24,7 @@ impl Miner {
         let (mined_block_sender, mined_block_receiver) = flume::unbounded();
         Ok(Self {
             public_key,
-            stream: Mutex::new(stream),
+            conn: Mutex::new(stream),
             current_template: Arc::new(std::sync::Mutex::new(None)),
             mining: Arc::new(AtomicBool::new(false)),
             mined_block_sender,
@@ -79,13 +79,13 @@ impl Miner {
     async fn fetch_template(&self) -> anyhow::Result<()> {
         println!("Fetching new template");
         let message = Message::FetchTemplate(self.public_key.clone());
-        let mut stream_lock = self.stream.lock().await;
-        message.send_async(&mut *stream_lock).await?;
-        drop(stream_lock);
-        let mut stream_lock = self.stream.lock().await;
-        match Message::receive_async(&mut *stream_lock).await? {
+        let mut conn_lock = self.conn.lock().await;
+        message.send_async(&mut *conn_lock).await?;
+        drop(conn_lock);
+        let mut conn_lock = self.conn.lock().await;
+        match Message::receive_async(&mut *conn_lock).await? {
             Message::Template(template) => {
-                drop(stream_lock);
+                drop(conn_lock);
                 println!("Received new template with target: {}", template.header.target);
                 *self.current_template.lock().unwrap() = Some(template);
                 self.mining.store(true, Ordering::Relaxed);
@@ -98,13 +98,13 @@ impl Miner {
     async fn validate_template(&self) -> anyhow::Result<()> {
         if let Some(template) = self.current_template.lock().unwrap().clone() {
             let message = Message::ValidateTemplate(template);
-            let mut stream_lock = self.stream.lock().await;
-            message.send_async(&mut *stream_lock).await?;
-            drop(stream_lock);
-            let mut stream_lock = self.stream.lock().await;
-            match Message::receive_async(&mut *stream_lock).await? {
+            let mut conn_lock = self.conn.lock().await;
+            message.send_async(&mut *conn_lock).await?;
+            drop(conn_lock);
+            let mut conn_lock = self.conn.lock().await;
+            match Message::receive_async(&mut *conn_lock).await? {
                 Message::TemplateValidity(valid) => {
-                    drop(stream_lock);
+                    drop(conn_lock);
                     if !valid {
                         println!("Current template is no longer valid");
                         self.mining.store(false, Ordering::Relaxed);
@@ -123,8 +123,8 @@ impl Miner {
     async fn submit_block(&self, block: Block) -> anyhow::Result<()> {
         println!("Submitting mined block");
         let message = Message::SubmitTemplate(block);
-        let mut stream_lock = self.stream.lock().await;
-        message.send_async(&mut *stream_lock).await?;
+        let mut conn_lock = self.conn.lock().await;
+        message.send_async(&mut *conn_lock).await?;
         self.mining.store(false, Ordering::Relaxed);
         Ok(())
     }
