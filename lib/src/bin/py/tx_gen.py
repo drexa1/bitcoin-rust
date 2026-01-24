@@ -21,7 +21,7 @@ def main():
         )]
     )
 
-    transaction.save(args.tx_file)
+    transaction.save_to_file(args.tx_file)
     print("Tx saved")
 
 

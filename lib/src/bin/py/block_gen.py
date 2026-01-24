@@ -31,7 +31,7 @@ def main():
         target=MIN_TARGET,
     ), transactions=transactions)
 
-    block.save(args.block_file)
+    block.save_to_file(args.block_file)
     print("Block saved")
 
 

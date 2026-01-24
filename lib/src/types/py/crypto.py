@@ -51,12 +51,12 @@ class PublicKey(BaseModel):
             return VerifyingKey.from_string(bytes.fromhex(v), curve=SECP256k1)
         return v
 
-    def save(self, filename: Path) -> None:
+    def save_to_file(self, filename: Path) -> None:
         with open(filename, "wb") as f:
             f.write(self.key.to_pem())
 
     @classmethod
-    def load(cls, filename: Path) -> "PublicKey":
+    def load_from_file(cls, filename: Path) -> "PublicKey":
         with open(filename, "r") as f:
             pem = f.read()
         return cls(key=VerifyingKey.from_pem(pem))

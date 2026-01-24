@@ -15,7 +15,9 @@ async def main():
     except Exception as e:
         raise RuntimeError(f"Error reading public key: {e}")
 
-    miner = await Miner.connect(args.address.split(":")[0], int(args.address.split(":")[1]), public_key)
+    node_host = args.address.split(":")[0]
+    node_port = int(args.address.split(":")[1])
+    miner = await Miner.connect(node_host, node_port, public_key)
     await miner.run()
 
 

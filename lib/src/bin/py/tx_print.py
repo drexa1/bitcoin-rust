@@ -7,7 +7,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--tx-file", type=Path, help="Path to the transaction file")
     args = parser.parse_args()
-    tx = Transaction.load(args.tx_file)
+    tx = Transaction.load_from_file(args.tx_file)
     print(tx)
 
 

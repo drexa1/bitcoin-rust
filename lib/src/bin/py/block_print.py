@@ -7,7 +7,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--block-file", type=Path, help="Path to the block file")
     args = parser.parse_args()
-    block = Block.load(args.block_file)
+    block = Block.load_from_file(args.block_file)
     print(block)
 
 if __name__ == "__main__":
