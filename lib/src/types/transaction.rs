@@ -1,7 +1,4 @@
-use std::io::{
-    Error as IoError, ErrorKind as IoErrorKind, Read,
-    Result as IoResult, Write
-};
+use std::io::{Error as IoError, ErrorKind as IoErrorKind, Read, Result as IoResult, Write};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::crypto::{Hash, PublicKey, Signature};

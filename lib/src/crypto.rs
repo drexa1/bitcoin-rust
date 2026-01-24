@@ -1,11 +1,6 @@
 use crate::types::Transaction;
 use crate::util::Saveable;
-use ecdsa::{
-    signature::{Signer, Verifier},
-    Signature as ECDSASignature,
-    SigningKey,
-    VerifyingKey
-};
+use ecdsa::{signature::{Signer, Verifier}, Signature as ECDSASignature, SigningKey, VerifyingKey};
 use k256::elliptic_curve::rand_core::OsRng;
 use k256::Secp256k1;
 use primitive_types::U256;
@@ -13,10 +8,7 @@ use serde::{Deserialize, Serialize};
 use sha256::digest;
 use spki::EncodePublicKey;
 use std::fmt;
-use std::io::{
-    Error as IoError, ErrorKind as IoErrorKind, Read,
-    Result as IoResult, Write,
-};
+use std::io::{Error as IoError, ErrorKind as IoErrorKind, Read, Result as IoResult, Write};
 
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
@@ -69,7 +61,7 @@ impl Signature {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct PublicKey(VerifyingKey<Secp256k1>);
 // Save and load as PEM
 impl Saveable for PublicKey {
@@ -88,6 +80,13 @@ impl Saveable for PublicKey {
             IoError::new(IoErrorKind::InvalidData, "Failed to serialize PublicKey")
         })?;
         writer.write_all(s.as_bytes())
+    }
+}
+impl fmt::Debug for PublicKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let json = serde_json::to_string_pretty(self)
+            .map_err(|_| fmt::Error)?;
+        write!(f, "{json}")
     }
 }
 

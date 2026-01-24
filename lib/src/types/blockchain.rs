@@ -1,7 +1,4 @@
-use std::io::{
-    Error as IoError, ErrorKind as IoErrorKind, Read,
-    Result as IoResult, Write,
-};
+use std::io::{Error as IoError, ErrorKind as IoErrorKind, Read, Result as IoResult, Write};
 use std::collections::{HashMap, HashSet};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};

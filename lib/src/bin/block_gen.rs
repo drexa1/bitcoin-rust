@@ -1,8 +1,6 @@
 use btclib::crypto::Hash;
 use btclib::crypto::{MerkleRoot, PrivateKey};
-use btclib::types::{
-    Block, BlockHeader, Transaction, TransactionOutput,
-};
+use btclib::types::{Block, BlockHeader, Transaction, TransactionOutput};
 use btclib::util::Saveable;
 use chrono::Utc;
 use std::env;
