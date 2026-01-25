@@ -156,25 +156,25 @@ impl Blockchain {
         if self.blocks.is_empty() {
             // If first block, check if the prev block hash is all zeroes
             if block.header.prev_block_hash != Hash::zero() {
-                println!("zero hash");
+                println!("Zero hash");
                 return Err(BtcError::InvalidBlock);
             }
         } else {
             // If not the first block, check if the prev block hash is the hash of the last block
             let last_block = self.blocks.last().unwrap();
             if block.header.prev_block_hash != last_block.hash() {
-                println!("wrong prev hash");
+                println!("Wrong prev hash");
                 return Err(BtcError::InvalidBlock);
             }
             // Check if the block's hash is less than the target
             if !block.header.hash().matches_target(block.header.target) {
-                println!("does not match target");
+                println!("Does not match target");
                 return Err(BtcError::InvalidBlock);
             }
             // Check if block's merkle root is correct
             let calculated_merkle_root = MerkleRoot::calculate(&block.transactions);
             if calculated_merkle_root != block.header.merkle_root {
-                println!("invalid merkle root");
+                println!("Invalid merkle root");
                 return Err(BtcError::InvalidMerkleRoot);
             }
             // Check if the block's timestamp is after the last block's timestamp
@@ -211,7 +211,7 @@ impl Blockchain {
         let target_seconds = crate::IDEAL_BLOCK_TIME * crate::DIFFICULTY_UPDATE_INTERVAL;
         // Multiply the current target by actual time divided by ideal time
         let new_target = BigDecimal::parse_bytes(&self.target.to_string().as_bytes(), 10)
-            .expect("BUG: impossible")
+            .expect("This should never happen")
             * (BigDecimal::from(time_diff_seconds)
             / BigDecimal::from(target_seconds));
         // Cut off the decimal point and everything after it from string representation of new_target
