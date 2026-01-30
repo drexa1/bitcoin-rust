@@ -1,18 +1,18 @@
 # Why
 
-After a long time actively avoiding learning Rust 🦀, I’ve decided to push myself and finally give it a commited try, driven by all the hype and FOMO, specially for blockchain projects.
+After a long time actively avoiding learning Rust 🦀, I’ve decided to push myself and finally give it a committed try, driven by all the hype and FOMO, especially for blockchain projects.
 
 The book "Building Bitcoin in Rust"—by Lukáš Hozda has been a gem, delving deeply into both the practicalities of blockchain design and aproaching to Rust.  
-However, what I decided to do here, was to write side-by-side versions of the Rust code alongside a Python equivalent, with a double purpose:
+However, what I decided to do here was to write side-by-side versions of the Rust code alongside a Python equivalent, with a double purpose:
 
-+ a) because it serves me as a Rosetta stone to understand that "thing A" in Rust is just the same as "thing B" in Python. With Rust's sometimes abbreviated and algebraic syntax, it becomes easier to recognize: "okay, this is just ..."  
++ a) because it serves me as a Rosetta stone to understand that "thing A" in Rust is just the same as "thing B" in Python. With Rust's sometimes abbreviated and algebraic syntax, it becomes easier to recognize: "okay, this is just [...]"  
 
 
 + b) because I’m finding hard to buy the two main arguments for the Rust hype: **security** and **speed**.
 
-About security, there is a plethora of safety nets in almost every programming language to avoid side effects. Just write immutable code!  
+About security, there are a plethora of safety nets in almost every programming language to avoid side effects. Just write immutable code!  
 The argument I read goes like: "yeah, but you have to be disciplined about it... and with Rust, the compiler forces you."  
-So you're telling me: that instead of knowing how to do your job, and doing it with an enabling and friendly language, the solution is to put fresh devs through an overly annoying language, and a compiler with which you need to spend hours to days fighting just to compile one line?  
+So you're telling me: that instead of knowing how to do your job, and doing it with an enabling and friendly language, the solution is to put fresh devs through an overly annoying language and a compiler with which you need to spend hours to days fighting just to compile one line?  
 
-As for performance, I'm not convinced either. Sure Python is dang slow ...but I'm not seeing differences that I would actually, care about between doing the same thing in Rust vs. doing it in ie: TypeScript.  
-And I'd be unassuming, and willing to extend that argument to Python, particularly in the light of the latest initiatives around compiling-optimizing to C and the recent developments in JIT libraries...
+As for performance, I'm not convinced either. Sure Python is dang slow ...but I'm not seeing differences (that I would care about) between doing the same thing in Rust vs. doing it in i.e.: TypeScript.  
+And I'd be unassuming and willing to extend that argument to Python, particularly in the light of the latest initiatives around compiling-optimizing to C and the recent developments in JIT libraries...
