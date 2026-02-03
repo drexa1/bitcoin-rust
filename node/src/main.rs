@@ -2,13 +2,14 @@ mod util;
 mod message_handler;
 
 use std::path::Path;
+use std::sync::Arc;
 use clap::Parser;
 use anyhow::Result;
 use dashmap::DashMap;
 use env_logger::Env;
 use static_init::dynamic;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 use btclib::types::Blockchain;
 use log::{info, warn};
 
@@ -28,7 +29,7 @@ struct Cli {
 pub static BLOCKCHAIN: RwLock<Blockchain> = RwLock::new(Blockchain::new());  // RwLock for sync
 
 #[dynamic]
-pub static NODES: DashMap<String, TcpStream> = DashMap::new();  // Immutable map of address and stream
+pub static NODES: DashMap<String, Arc<Mutex<TcpStream>>> = DashMap::new();  // Immutable map of address and stream
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -40,11 +41,6 @@ async fn main() -> Result<()> {
     let port = cli.port;
     let blockchain_file = cli.blockchain_file;
     let nodes = cli.nodes;
-
-    // Node discovery
-    let node_addr = format!("127.0.0.1:{}", port);
-    util::populate_connections(&node_addr, &nodes).await?;
-    info!("🌐 Known network nodes: [{}]", NODES.len());
 
     // Check if the blockchain_file exists
     if Path::new(&blockchain_file).exists() {
@@ -71,6 +67,10 @@ async fn main() -> Result<()> {
     let bind_addr = format!("0.0.0.0:{}", port);
     let listener = TcpListener::bind(&bind_addr).await?;
     info!("👂 Listening on {}", bind_addr);
+
+    // Node discovery
+    let node_addr = format!("localhost:{}", port);
+    util::populate_connections(&node_addr, &nodes).await?;
 
     // Start a task to periodically clean up the mempool
     tokio::spawn(util::mempool_cleanup());

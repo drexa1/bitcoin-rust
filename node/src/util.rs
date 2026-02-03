@@ -1,6 +1,8 @@
+use std::sync::Arc;
 use anyhow::{Context, Result};
 use log::{error, info};
 use tokio::net::TcpStream;
+use tokio::sync::Mutex;
 use tokio::time;
 use btclib::network::Message;
 use btclib::types::Blockchain;
@@ -10,18 +12,21 @@ pub async fn populate_connections(node_addr: &str, known_nodes: &[String]) -> Re
     info!("Trying to connect to other nodes...");
     for known_node in known_nodes {
         info!("🔗 Connecting to [{}]", known_node);
-        let mut stream = TcpStream::connect(&known_node).await?;
+        let stream = Arc::new(Mutex::new(TcpStream::connect(&known_node).await?));
+        let mut locked_stream = stream.lock().await;
         // Add first all the nodes known by each known node
-        Message::DiscoverNodes(node_addr.to_string(), known_node.to_string()).send_async(&mut stream).await?;
+        Message::DiscoverNodes(node_addr.to_string(), known_node.to_string()).send_async(&mut *locked_stream).await?;
         info!("Sending 'DiscoverNodes' to [{}]", known_node);
-        let message = Message::receive_async(&mut stream).await?;
+        let message = Message::receive_async(&mut *locked_stream).await?;
         match message {
             Message::NodeList(nodes_response) => {
                 info!("Received 'NodeList' from [{}] with {} nodes", known_node, nodes_response.len());
                 for node in nodes_response {
-                    let stream = TcpStream::connect(&node).await?;
-                    info!("➕  Added node [{}]", node);
-                    crate::NODES.insert(node, stream);
+                    if node != node_addr {
+                        let stream = Arc::new(Mutex::new(TcpStream::connect(&node).await?));
+                        info!("➕  Added node [{}]", node);
+                        crate::NODES.insert(node, stream);
+                    }
                 }
             }
             e => {
@@ -30,8 +35,9 @@ pub async fn populate_connections(node_addr: &str, known_nodes: &[String]) -> Re
         }
         // Finally add each known node given as boot config
         info!("➕  Added node [{}]", known_node);
-        crate::NODES.insert(known_node.clone(), stream);
+        crate::NODES.insert(known_node.clone(), stream.clone());
     }
+    info!("🌐 Known network nodes: [{}]", crate::NODES.len());
     Ok(())
 }
 
@@ -54,19 +60,27 @@ pub async fn find_longest_chain_node() -> Result<(String, u32)> {
     info!("🪜 Finding nodes with the highest blockchain length...");
     let mut longest_node = String::new();
     let mut longest_count = 0;
-    let all_nodes = crate::NODES.iter().map(|x| x.key().clone()).collect::<Vec<_>>();
+    let all_nodes: Vec<String> = crate::NODES.iter().map(|entry| entry.key().clone()).collect();
     for node in all_nodes {
         info!("Asking [{}] about blockchain length", node);
-        let mut stream = crate::NODES.get_mut(&node).context("no node")?;
-        let message = Message::AskDifference(0);
-        message.send_async(&mut *stream).await?;
+        let node_stream = crate::NODES.get(&node).context("no node")?.clone();
+        // Lock for sending
+        {
+            let message = Message::AskDifference(0);
+            let mut locked_stream = node_stream.lock().await;
+            message.send_async(&mut *locked_stream).await?;
+        }
         info!("Sent 'AskDifference' to [{}]", node);
-        let message = Message::receive_async(&mut *stream).await?;
+        // Lock for receiving
+        let message = {
+            let mut locked_stream = node_stream.lock().await;
+            Message::receive_async(&mut *locked_stream).await?
+        };
         match message {
             Message::Difference(count) => {
                 info!("Received 'Difference' from [{}]", node);
                 if count > longest_count {
-                    info!("New longest blockchain: {} blocks from [{node}]", count);
+                    info!("New longest blockchain: {} blocks from [{}]", count, node);
                     longest_count = count;
                     longest_node = node;
                 }
@@ -80,11 +94,19 @@ pub async fn find_longest_chain_node() -> Result<(String, u32)> {
 }
 
 pub(crate) async fn download_blockchain(node: &str, count: u32) -> Result<()> {
-    let mut stream = crate::NODES.get_mut(node).unwrap();
+    let node_stream = crate::NODES.get(node).context("node not found")?.clone();
     for i in 0..count as usize {
         let message = Message::FetchBlock(i);
-        message.send_async(&mut *stream).await?;
-        let message = Message::receive_async(&mut *stream).await?;
+        // Lock for sending
+        {
+            let mut locked_stream = node_stream.lock().await;
+            message.send_async(&mut *locked_stream).await?;
+        }
+        // Lock for receiving
+        let message = {
+            let mut locked_stream = node_stream.lock().await;
+            Message::receive_async(&mut *locked_stream).await?
+        };
         match message {
             Message::NewBlock(block) => {
                 let mut blockchain = crate::BLOCKCHAIN.write().await;

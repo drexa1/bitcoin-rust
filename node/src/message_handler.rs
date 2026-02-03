@@ -1,19 +1,23 @@
 use std::collections::HashSet;
+use std::sync::Arc;
 use base64::Engine;
 use base64::engine::general_purpose;
 use chrono::Utc;
 use log::{error, info, warn};
 use uuid::Uuid;
 use tokio::net::TcpStream;
+use tokio::sync::Mutex;
 use btclib::crypto::{Hash, MerkleRoot};
 use btclib::network::Message;
 use btclib::types::{Block, BlockHeader, Transaction, TransactionOutput};
 use btclib::network::Message::*;
 
-pub async fn handle(mut stream: TcpStream) {
+pub async fn handle(stream: TcpStream) {
+    let stream = Arc::new(Mutex::new(stream));
     loop {
         // Read a message from the socket
-        let message = match Message::receive_async(&mut stream).await {
+        let mut locked_stream = stream.lock().await;
+        let message = match Message::receive_async(&mut *locked_stream).await {
             Ok(message) => message,
             Err(e) => {
                 error!("Invalid message from peer: {e}, closing connection");
@@ -25,16 +29,26 @@ pub async fn handle(mut stream: TcpStream) {
                 let blockchain = crate::BLOCKCHAIN.read().await;
                 let count = blockchain.block_height() as i32 - height as i32;
                 let message = Difference(count);
-                message.send_async(&mut stream).await.unwrap();
+                message.send_async(&mut *locked_stream).await.unwrap();
             }
             DiscoverNodes(dialing_node, current_node) => {
                 // Here, the responding node is the dialed one
                 info!("📞 [{}] receiving call from [{}]", current_node, dialing_node);
-                // Befriend caller
-                // crate::NODES.insert(dialing_node.clone(), stream);  // TODO
+                match TcpStream::connect(&dialing_node).await {
+                    Ok(s) => {
+                        let stream = Arc::new(Mutex::new(s));
+                        crate::NODES.insert(dialing_node.clone(), stream);
+                        info!("➕  Added node [{}]", dialing_node);
+                        info!("🌐 Known network nodes: [{}]", crate::NODES.len());
+                    },
+                    Err(e) => {
+                        error!("⚠️ Failed to connect to {}: {}", dialing_node, e);
+                        return;
+                    }
+                }
                 let nodes: HashSet<String> = crate::NODES.iter().map(|x| x.key().clone()).collect();
                 let message = NodeList(nodes);
-                message.send_async(&mut stream).await.unwrap();
+                message.send_async(&mut *locked_stream).await.unwrap();
             }
             FetchBlock(height) => {
                 let blockchain = crate::BLOCKCHAIN.read().await;
@@ -42,7 +56,7 @@ pub async fn handle(mut stream: TcpStream) {
                     return;
                 };
                 let message = NewBlock(block);
-                message.send_async(&mut stream).await.unwrap();
+                message.send_async(&mut *locked_stream).await.unwrap();
             }
             FetchTemplate(pubkey) => {
                 let blockchain = crate::BLOCKCHAIN.read().await;
@@ -92,7 +106,7 @@ pub async fn handle(mut stream: TcpStream) {
                 // Recalculate merkle root
                 block.header.merkle_root = MerkleRoot::calculate(&block.transactions);
                 let message = Template(block);
-                message.send_async(&mut stream).await.unwrap();
+                message.send_async(&mut *locked_stream).await.unwrap();
             }
             FetchUTXOs(key) => {
                 println!("Received request to fetch UTXOs");
@@ -103,7 +117,7 @@ pub async fn handle(mut stream: TcpStream) {
                     (tx_out.clone(), *marked)
                 }).collect::<Vec<_>>();
                 let message = UTXOs(utxos);
-                message.send_async(&mut stream).await.unwrap();
+                message.send_async(&mut *locked_stream).await.unwrap();
             }
             NewBlock(block) => {
                 let mut blockchain = crate::BLOCKCHAIN.write().await;
@@ -126,7 +140,7 @@ pub async fn handle(mut stream: TcpStream) {
                 info!("Received allegedly mined template from: 👷{}", miner_id);
                 let mut blockchain = crate::BLOCKCHAIN.write().await;
                 if let Err(e) = blockchain.add_block(block.clone()) {
-                    error!("❌ Block rejected: {e}, closing connection");
+                    error!("❌  Block rejected: {e}, closing connection");
                     return;
                 }
                 blockchain.rebuild_utxos();
@@ -134,9 +148,10 @@ pub async fn handle(mut stream: TcpStream) {
                 // Send block to all friend nodes
                 let nodes = crate::NODES.iter().map(|x| x.key().clone()).collect::<Vec<_>>();
                 for node in nodes {
-                    if let Some(mut stream) = crate::NODES.get_mut(&node) {
+                    if let Some(stream) = crate::NODES.get_mut(&node) {
                         let message = NewBlock(block.clone());
-                        if message.send_async(&mut *stream).await.is_err() {
+                        let mut locked_stream = stream.lock().await;
+                        if message.send_async(&mut *locked_stream).await.is_err() {
                             error!("⚠️ Failed to send block to {}", node);
                         }
                     }
@@ -157,9 +172,10 @@ pub async fn handle(mut stream: TcpStream) {
                     .collect::<Vec<_>>();
                 for node in nodes {
                     info!("Sending to friend: [{node}]");
-                    if let Some(mut stream) = crate::NODES.get_mut(&node) {
+                    if let Some(stream) = crate::NODES.get_mut(&node) {
                         let message = NewTransaction(tx.clone());
-                        if message.send_async(&mut *stream).await.is_err() {
+                        let mut locked_stream = stream.lock().await;
+                        if message.send_async(&mut *locked_stream).await.is_err() {
                             error!("⚠️ Failed to send transaction to {}", node);
                         }
                     }
@@ -178,7 +194,7 @@ pub async fn handle(mut stream: TcpStream) {
                     .map(|last_block| last_block.hash())
                     .unwrap_or(Hash::zero());
                 let message = TemplateValidity(status);
-                message.send_async(&mut stream).await.unwrap();
+                message.send_async(&mut *locked_stream).await.unwrap();
             }
         }
     }
