@@ -9,19 +9,21 @@ use tokio::time::interval;
 use btclib::crypto::PublicKey;
 use btclib::network::Message;
 use btclib::types::Block;
+use log::{info, warn};
 
 pub struct Miner {
     public_key: PublicKey,
     conn: Mutex<TcpStream>,
     current_template: Arc<std::sync::Mutex<Option<Block>>>,
     mining: Arc<AtomicBool>,
-    mined_block_sender: flume::Sender<Block>,
-    mined_block_receiver: flume::Receiver<Block>
+    mined_block_receiver: flume::Receiver<Block>,
+    mined_block_sender: flume::Sender<Block>
 }
 impl Miner {
     pub(crate) async fn new(address: String, public_key: PublicKey) -> anyhow::Result<Self> {
         let stream = TcpStream::connect(&address).await?;
         let (mined_block_sender, mined_block_receiver) = flume::unbounded();
+        info!("🔗 Connected to node: [{}]", address);
         Ok(Self {
             public_key,
             conn: Mutex::new(stream),
@@ -55,9 +57,8 @@ impl Miner {
         thread::spawn(move || loop {
             if mining.load(Ordering::Relaxed) {
                 if let Some(mut block) = template.lock().unwrap().clone() {
-                    println!("Mining block with target: {}", block.header.target);
                     if block.header.mine(2_000_000) {
-                        println!("Block mined: {}", block.hash());
+                        info!("📦️Block mined: {}{}", " ".repeat(22), block.hash());
                         sender.send(block).expect("Failed to send mined block", );
                         mining.store(false, Ordering::Relaxed);
                     }
@@ -77,7 +78,7 @@ impl Miner {
     }
 
     async fn fetch_template(&self) -> anyhow::Result<()> {
-        println!("Fetching new template");
+        info!("Fetching new template");
         let message = Message::FetchTemplate(self.public_key.clone());
         let mut conn_lock = self.conn.lock().await;
         message.send_async(&mut *conn_lock).await?;
@@ -86,7 +87,7 @@ impl Miner {
         match Message::receive_async(&mut *conn_lock).await? {
             Message::Template(template) => {
                 drop(conn_lock);
-                println!("Received new template with target: {}", template.header.target);
+                info!("↪️ Received new template with target: {}", template.header.target);
                 *self.current_template.lock().unwrap() = Some(template);
                 self.mining.store(true, Ordering::Relaxed);
                 Ok(())
@@ -106,10 +107,10 @@ impl Miner {
                 Message::TemplateValidity(valid) => {
                     drop(conn_lock);
                     if !valid {
-                        println!("Current template is no longer valid");
+                        warn!("Current template is no longer valid");
                         self.mining.store(false, Ordering::Relaxed);
                     } else {
-                        println!("Current template is still valid");
+                        info!("Current template is still valid");
                     }
                     Ok(())
                 }
@@ -121,8 +122,8 @@ impl Miner {
     }
 
     async fn submit_block(&self, block: Block) -> anyhow::Result<()> {
-        println!("Submitting mined block");
-        let message = Message::SubmitTemplate(block);
+        info!("🚚 Submitting mined block");
+        let message = Message::SubmitTemplate(block, self.public_key.clone());
         let mut conn_lock = self.conn.lock().await;
         message.send_async(&mut *conn_lock).await?;
         self.mining.store(false, Ordering::Relaxed);

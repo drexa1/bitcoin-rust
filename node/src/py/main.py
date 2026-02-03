@@ -29,7 +29,7 @@ async def main():
             if longest_name:
                 # Request the blockchain from the node with the longest blockchain
                 await util.download_blockchain(longest_name, longest_count)
-                print(f"blockchain downloaded from {longest_name}")
+                print(f"blockchain downloaded from [{longest_name}]")
                 # Rebuild UTXOs and adjust target
                 util.BLOCKCHAIN.rebuild_utxos()
                 util.BLOCKCHAIN.try_adjust_target()

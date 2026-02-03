@@ -62,7 +62,7 @@ impl Signature {
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
-pub struct PublicKey(VerifyingKey<Secp256k1>);
+pub struct PublicKey(pub VerifyingKey<Secp256k1>);
 // Save and load as PEM
 impl Saveable for PublicKey {
     fn load<I: Read>(mut reader: I) -> IoResult<Self> {

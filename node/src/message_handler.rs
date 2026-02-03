@@ -1,4 +1,8 @@
+use std::collections::HashSet;
+use base64::Engine;
+use base64::engine::general_purpose;
 use chrono::Utc;
+use log::{error, info, warn};
 use uuid::Uuid;
 use tokio::net::TcpStream;
 use btclib::crypto::{Hash, MerkleRoot};
@@ -6,20 +10,31 @@ use btclib::network::Message;
 use btclib::types::{Block, BlockHeader, Transaction, TransactionOutput};
 use btclib::network::Message::*;
 
-pub async fn handle(mut socket: TcpStream) {
+pub async fn handle(mut stream: TcpStream) {
     loop {
         // Read a message from the socket
-        let message = match Message::receive_async(&mut socket).await {
+        let message = match Message::receive_async(&mut stream).await {
             Ok(message) => message,
             Err(e) => {
-                println!("Invalid message from peer: {e}, closing connection");
+                error!("Invalid message from peer: {e}, closing connection");
                 return;
             }
         };
         match message {
-            UTXOs(_) | Template(_) | Difference(_) | TemplateValidity(_) | NodeList(_) => {
-                println!("I am neither a miner nor a wallet! Goodbye");
-                return;
+            AskDifference(height) => {
+                let blockchain = crate::BLOCKCHAIN.read().await;
+                let count = blockchain.block_height() as i32 - height as i32;
+                let message = Difference(count);
+                message.send_async(&mut stream).await.unwrap();
+            }
+            DiscoverNodes(dialing_node, current_node) => {
+                // Here, the responding node is the dialed one
+                info!("📞 [{}] receiving call from [{}]", current_node, dialing_node);
+                // Befriend caller
+                // crate::NODES.insert(dialing_node.clone(), stream);  // TODO
+                let nodes: HashSet<String> = crate::NODES.iter().map(|x| x.key().clone()).collect();
+                let message = NodeList(nodes);
+                message.send_async(&mut stream).await.unwrap();
             }
             FetchBlock(height) => {
                 let blockchain = crate::BLOCKCHAIN.read().await;
@@ -27,101 +42,7 @@ pub async fn handle(mut socket: TcpStream) {
                     return;
                 };
                 let message = NewBlock(block);
-                message.send_async(&mut socket).await.unwrap();
-            }
-            DiscoverNodes => {
-                let nodes = crate::NODES.iter().map(|x| x.key().clone()).collect::<Vec<_>>();
-                let message = NodeList(nodes);
-                message.send_async(&mut socket).await.unwrap();
-            }
-            AskDifference(height) => {
-                let blockchain = crate::BLOCKCHAIN.read().await;
-                let count = blockchain.block_height() as i32 - height as i32;
-                let message = Difference(count);
-                message.send_async(&mut socket).await.unwrap();
-            }
-            FetchUTXOs(key) => {
-                println!("Received request to fetch UTXOs");
-                let blockchain = crate::BLOCKCHAIN.read().await;
-                let utxos = blockchain.utxos().iter().filter(|(_, (_, tx_out))| {
-                    tx_out.public_key == key
-                }).map(|(_, (marked, tx_out))| {
-                    (tx_out.clone(), *marked)
-                }).collect::<Vec<_>>();
-                let message = UTXOs(utxos);
-                message.send_async(&mut socket).await.unwrap();
-            }
-            NewBlock(block) => {
-                let mut blockchain = crate::BLOCKCHAIN.write().await;
-                println!("Received new block");
-                if blockchain.add_block(block).is_err() {
-                    println!("Block rejected");
-                }
-            }
-            NewTransaction(tx) => {
-                let mut blockchain = crate::BLOCKCHAIN.write().await;
-                println!("Received transaction from friend");
-                if blockchain.add_to_mempool(tx).is_err() {
-                    println!("Transaction rejected, closing connection");
-                    return;
-                }
-            }
-            ValidateTemplate(block_template) => {
-                let blockchain = crate::BLOCKCHAIN.read().await;
-                let status = block_template.header.prev_block_hash == blockchain
-                    .blocks()
-                    .last()
-                    .map(|last_block| last_block.hash())
-                    .unwrap_or(Hash::zero());
-                let message = TemplateValidity(status);
-                message.send_async(&mut socket).await.unwrap();
-            }
-            SubmitTemplate(block) => {
-                println!("Received allegedly mined template");
-                let mut blockchain = crate::BLOCKCHAIN.write().await;
-                if let Err(e) = blockchain.add_block(block.clone()) {
-                    println!("Block rejected: {e}, closing connection");
-                    return;
-                }
-                blockchain.rebuild_utxos();
-                println!("Block looks good, broadcasting");
-                // Send block to all friend nodes
-                let nodes = crate::NODES
-                    .iter()
-                    .map(|x| x.key().clone())
-                    .collect::<Vec<_>>();
-                for node in nodes {
-                    if let Some(mut stream) = crate::NODES.get_mut(&node) {
-                        let message = NewBlock(block.clone());
-                        if message.send_async(&mut *stream).await.is_err() {
-                            println!("failed to send block to {}", node);
-                        }
-                    }
-                }
-            }
-            SubmitTransaction(tx) => {
-                println!("Submit tx");
-                let mut blockchain = crate::BLOCKCHAIN.write().await;
-                if let Err(e) = blockchain.add_to_mempool(tx.clone()) {
-                    println!("transaction rejected, closing connection: {e}");
-                    return;
-                }
-                println!("Added transaction to mempool");
-                // Send transaction to all friend nodes
-                let nodes = crate::NODES
-                    .iter()
-                    .map(|x| x.key().clone())
-                    .collect::<Vec<_>>();
-                for node in nodes {
-                    println!("sending to friend: {node}");
-                    if let Some(mut stream) = crate::NODES.get_mut(&node) {
-                        let message = NewTransaction(tx.clone());
-                        if message.send_async(&mut *stream).await.is_err() {
-                            println!("failed to send transaction to {}", node);
-                        }
-                    }
-                }
-                println!("transaction sent to friends");
+                message.send_async(&mut stream).await.unwrap();
             }
             FetchTemplate(pubkey) => {
                 let blockchain = crate::BLOCKCHAIN.read().await;
@@ -136,7 +57,7 @@ pub async fn handle(mut socket: TcpStream) {
                         .cloned()
                         .collect::<Vec<_>>(),
                 );
-                // Insert coinbase tx with pubkey
+                // Insert coinbase tx with a pubkey
                 transactions.insert(0, Transaction {
                     inputs: vec![],
                     outputs: vec![TransactionOutput {
@@ -161,7 +82,7 @@ pub async fn handle(mut socket: TcpStream) {
                 let miner_fees = match block.calculate_miner_fees(blockchain.utxos()) {
                     Ok(fees) => fees,
                     Err(e) => {
-                        eprintln!("{e}");
+                        error!("{e}");
                         return;
                     }
                 };
@@ -171,7 +92,93 @@ pub async fn handle(mut socket: TcpStream) {
                 // Recalculate merkle root
                 block.header.merkle_root = MerkleRoot::calculate(&block.transactions);
                 let message = Template(block);
-                message.send_async(&mut socket).await.unwrap();
+                message.send_async(&mut stream).await.unwrap();
+            }
+            FetchUTXOs(key) => {
+                println!("Received request to fetch UTXOs");
+                let blockchain = crate::BLOCKCHAIN.read().await;
+                let utxos = blockchain.utxos().iter().filter(|(_, (_, tx_out))| {
+                    tx_out.public_key == key
+                }).map(|(_, (marked, tx_out))| {
+                    (tx_out.clone(), *marked)
+                }).collect::<Vec<_>>();
+                let message = UTXOs(utxos);
+                message.send_async(&mut stream).await.unwrap();
+            }
+            NewBlock(block) => {
+                let mut blockchain = crate::BLOCKCHAIN.write().await;
+                info!("📦 Received new block");
+                if blockchain.add_block(block).is_err() {
+                    error!("❌  Block rejected");
+                }
+            }
+            NewTransaction(tx) => {
+                let mut blockchain = crate::BLOCKCHAIN.write().await;
+                println!("Received transaction from friend");
+                if blockchain.add_to_mempool(tx).is_err() {
+                    error!("❌ Transaction rejected, closing connection");
+                    return;
+                }
+            }
+            SubmitTemplate(block, miner) => {
+                let encoded_point = miner.0.to_encoded_point(true);
+                let miner_id = general_purpose::STANDARD.encode(encoded_point.as_bytes());
+                info!("Received allegedly mined template from: 👷{}", miner_id);
+                let mut blockchain = crate::BLOCKCHAIN.write().await;
+                if let Err(e) = blockchain.add_block(block.clone()) {
+                    error!("❌ Block rejected: {e}, closing connection");
+                    return;
+                }
+                blockchain.rebuild_utxos();
+                info!("Block looks good, broadcasting📡️");
+                // Send block to all friend nodes
+                let nodes = crate::NODES.iter().map(|x| x.key().clone()).collect::<Vec<_>>();
+                for node in nodes {
+                    if let Some(mut stream) = crate::NODES.get_mut(&node) {
+                        let message = NewBlock(block.clone());
+                        if message.send_async(&mut *stream).await.is_err() {
+                            error!("⚠️ Failed to send block to {}", node);
+                        }
+                    }
+                }
+            }
+            SubmitTransaction(tx) => {
+                println!("Submit tx");
+                let mut blockchain = crate::BLOCKCHAIN.write().await;
+                if let Err(e) = blockchain.add_to_mempool(tx.clone()) {
+                    error!("❌ Transaction rejected, closing connection: {e}");
+                    return;
+                }
+                info!("🗃️ Added transaction to mempool");
+                // Send transaction to all friend nodes
+                let nodes = crate::NODES
+                    .iter()
+                    .map(|x| x.key().clone())
+                    .collect::<Vec<_>>();
+                for node in nodes {
+                    info!("Sending to friend: [{node}]");
+                    if let Some(mut stream) = crate::NODES.get_mut(&node) {
+                        let message = NewTransaction(tx.clone());
+                        if message.send_async(&mut *stream).await.is_err() {
+                            error!("⚠️ Failed to send transaction to {}", node);
+                        }
+                    }
+                }
+                info!("💰 Transaction sent to friends");
+            }
+            UTXOs(_) | Template(_) | Difference(_) | TemplateValidity(_) | NodeList(_) => {
+                warn!("👋 I am neither a miner nor a wallet! Goodbye");
+                return;
+            }
+            ValidateTemplate(block_template) => {
+                let blockchain = crate::BLOCKCHAIN.read().await;
+                let status = block_template.header.prev_block_hash == blockchain
+                    .blocks()
+                    .last()
+                    .map(|last_block| last_block.hash())
+                    .unwrap_or(Hash::zero());
+                let message = TemplateValidity(status);
+                message.send_async(&mut stream).await.unwrap();
             }
         }
     }

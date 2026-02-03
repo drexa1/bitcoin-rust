@@ -4,6 +4,7 @@ use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use primitive_types::U256;
 use serde::{Deserialize, Serialize};
+use log::{error, warn};
 use crate::crypto::{Hash, MerkleRoot};
 use crate::error::BtcError;
 use crate::MAX_MEMPOOL_TRANSACTION_AGE;
@@ -156,25 +157,25 @@ impl Blockchain {
         if self.blocks.is_empty() {
             // If first block, check if the prev block hash is all zeroes
             if block.header.prev_block_hash != Hash::zero() {
-                println!("Zero hash");
+                warn!("Zero hash");
                 return Err(BtcError::InvalidBlock);
             }
         } else {
             // If not the first block, check if the prev block hash is the hash of the last block
             let last_block = self.blocks.last().unwrap();
             if block.header.prev_block_hash != last_block.hash() {
-                println!("Wrong prev hash");
+                error!("Wrong prev hash");
                 return Err(BtcError::InvalidBlock);
             }
             // Check if the block's hash is less than the target
             if !block.header.hash().matches_target(block.header.target) {
-                println!("Does not match target");
+                error!("Does not match target");
                 return Err(BtcError::InvalidBlock);
             }
             // Check if block's merkle root is correct
             let calculated_merkle_root = MerkleRoot::calculate(&block.transactions);
             if calculated_merkle_root != block.header.merkle_root {
-                println!("Invalid merkle root");
+                error!("Invalid merkle root");
                 return Err(BtcError::InvalidMerkleRoot);
             }
             // Check if the block's timestamp is after the last block's timestamp
@@ -184,7 +185,7 @@ impl Blockchain {
             // Verify all transactions in the block
             block.verify_transactions(self.block_height(), &self.utxos)?;
         }
-        // Remove transactions from mempool that are now in the block
+        // Remove transactions from the mempool that are now in the block
         let block_transactions: HashSet<_> = block.transactions.iter().map(|tx| tx.hash()).collect();
         self.mempool.retain(|(_, tx)| {
             !block_transactions.contains(&tx.hash())
