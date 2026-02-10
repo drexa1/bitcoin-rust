@@ -14,6 +14,7 @@ About security, there is an assortment of mechanisms in almost every programming
 The argument I read goes like: "yeah, but you have to be disciplined about it... and with Rust, the compiler forces you."  
 I'm dubious that instead of knowing how to do your job and doing it with an enabling and friendly language, the solution is to put devs through a language and a compiler where you need to spend hours/days fighting to compile one line.  
 
-As for performance, particularly in the light of the latest initiatives around compiling-optimizing to C and the recent developments in JIT libraries...
+For performance, it's hard to say from my standpoint because the things I normally care about do not demand peak CPU performance. 
+But I'd be willing to contest it, particularly in the light of the latest initiatives around compiling-optimizing to C and the recent developments in JIT libraries...
 
 [EDIT]: After a couple of months, I have to admit that there is one argument which stands up: the argument for mathematical correctness in math-sensitive operations.
