@@ -9,7 +9,7 @@ However, what I decided to do here was to write side-by-side versions of the Rus
 
 + b) because I'm wrestling with the two main arguments for the Rust hype: **security** and **speed**.
 
-About security, there is an assortment of mechanisms in almost every programming language to avoid side effects (Just write immutable code!)  
+About security, there is an assortment of mechanisms in almost every programming language to avoid side effects (Just write immutable code!).  
 The argument I read goes like: "yeah, but you have to be disciplined about it... and with Rust, the compiler forces you."  
 I'm dubious that instead of knowing how to do your job and doing it with an enabling and friendly language, the solution is to put devs through a language and a compiler where you need to spend hours/days fighting to compile one line.  
 
