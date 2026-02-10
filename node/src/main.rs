@@ -42,6 +42,15 @@ async fn main() -> Result<()> {
     let blockchain_file = cli.blockchain_file;
     let nodes = cli.nodes;
 
+    // Start the listener
+    let bind_addr = format!("0.0.0.0:{}", port);
+    let listener = TcpListener::bind(&bind_addr).await?;
+    info!("👂 Listening on {}", bind_addr);
+
+    // Node discovery
+    let node_addr = format!("localhost:{}", port);
+    util::populate_connections(&node_addr, &nodes).await?;
+
     // Check if the blockchain_file exists
     if Path::new(&blockchain_file).exists() {
         info!("✅  Blockchain file '{}' exists", blockchain_file);
@@ -62,15 +71,6 @@ async fn main() -> Result<()> {
             }
         }
     }
-
-    // Start the listener
-    let bind_addr = format!("0.0.0.0:{}", port);
-    let listener = TcpListener::bind(&bind_addr).await?;
-    info!("👂 Listening on {}", bind_addr);
-
-    // Node discovery
-    let node_addr = format!("localhost:{}", port);
-    util::populate_connections(&node_addr, &nodes).await?;
 
     // Start a task to periodically clean up the mempool
     tokio::spawn(util::mempool_cleanup());

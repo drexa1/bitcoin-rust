@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use crate::types::Transaction;
 use crate::util::Saveable;
 use ecdsa::{signature::{Signer, Verifier}, Signature as ECDSASignature, SigningKey, VerifyingKey};
@@ -87,6 +88,19 @@ impl fmt::Debug for PublicKey {
         let json = serde_json::to_string_pretty(self)
             .map_err(|_| fmt::Error)?;
         write!(f, "{json}")
+    }
+}
+impl Ord for PublicKey {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let a = self.0.to_encoded_point(true);
+        let b = other.0.to_encoded_point(true);
+        a.as_bytes().cmp(b.as_bytes())
+    }
+}
+
+impl PartialOrd for PublicKey {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 

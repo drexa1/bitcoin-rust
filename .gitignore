@@ -1,8 +1,9 @@
 /.idea/
 /.run/
-/.vscode/
-/runConfigurations
-/target
+/.vscode/4
+/logs/
+/runConfigurations/
+/target/
 /node/resources/*/blockchain-*.cbor
 Cargo.lock
 *.priv.cbor

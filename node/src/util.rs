@@ -60,7 +60,7 @@ pub async fn find_longest_chain_node() -> Result<(String, u32)> {
     info!("🪜 Finding nodes with the highest blockchain length...");
     let mut longest_node = String::new();
     let mut longest_count = 0;
-    let all_nodes: Vec<String> = crate::NODES.iter().map(|entry| entry.key().clone()).collect();
+    let all_nodes = crate::NODES.iter().map(|x| x.key().clone()).collect::<Vec<_>>();
     for node in all_nodes {
         info!("Asking [{}] about blockchain length", node);
         let node_stream = crate::NODES.get(&node).context("no node")?.clone();

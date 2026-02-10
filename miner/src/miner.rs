@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 use anyhow::anyhow;
+use flume::{Receiver, Sender};
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio::time::interval;
@@ -16,8 +17,8 @@ pub struct Miner {
     conn: Mutex<TcpStream>,
     current_template: Arc<std::sync::Mutex<Option<Block>>>,
     mining: Arc<AtomicBool>,
-    mined_block_receiver: flume::Receiver<Block>,
-    mined_block_sender: flume::Sender<Block>
+    mined_block_receiver: Receiver<Block>,
+    mined_block_sender: Sender<Block>
 }
 impl Miner {
     pub(crate) async fn new(address: String, public_key: PublicKey) -> anyhow::Result<Self> {
