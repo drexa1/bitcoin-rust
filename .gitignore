@@ -5,6 +5,7 @@
 /runConfigurations/
 /target/
 /node/resources/*/blockchain-*.cbor
+/wallet/resources/*.toml
 Cargo.lock
 *.priv.cbor
 *.pub.pem

@@ -1,31 +1,7 @@
 use crate::core::{Config, Core, FeeConfig, FeeType, Recipient};
 use anyhow::Result;
-use std::panic;
 use std::path::PathBuf;
 use text_to_ascii_art::to_art;
-use tracing::*;
-use tracing_appender::rolling::{RollingFileAppender, Rotation};
-use tracing_subscriber::{fmt, prelude::*, EnvFilter};
-
-/// Initialize tracing to save logs into the logs/ folder
-pub fn setup_tracing() -> Result<()> {
-    let file_appender = RollingFileAppender::new(Rotation::DAILY, "logs", "wallet.log");
-    tracing_subscriber::registry()
-        .with(fmt::layer().with_writer(file_appender))
-        .with(EnvFilter::from_default_env().add_directive(Level::DEBUG.into()))
-        .init();
-    Ok(())
-}
-
-/// Make sure tracing is able to log panics occurring in the wallet
-pub fn setup_panic_hook() {
-    panic::set_hook(Box::new(|panic_info| {
-        let backtrace = std::backtrace::Backtrace::force_capture();
-        error!("Application panicked!");
-        error!("Panic info: {:?}", panic_info);
-        error!("Backtrace: {:?}", backtrace);
-    }));
-}
 
 /// Generate a start config
 pub(crate) fn generate_config(path: &PathBuf) -> Result<()> {
@@ -33,12 +9,12 @@ pub(crate) fn generate_config(path: &PathBuf) -> Result<()> {
         my_keys: vec![],
         contacts: vec![
             Recipient {
-                name: "Alice".to_string(),
-                key: PathBuf::from("alice.pub.pem"),
+                name: "drexa".to_string(),
+                key: PathBuf::from("drexa.pub.pem"),
             },
             Recipient {
-                name: "Bob".to_string(),
-                key: PathBuf::from("bob.pub.pem"),
+                name: "ian".to_string(),
+                key: PathBuf::from("ian.pub.pem"),
             }
         ],
         default_node: "127.0.0.1:9000".to_string(),

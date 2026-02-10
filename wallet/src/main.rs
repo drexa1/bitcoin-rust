@@ -7,11 +7,12 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use core::Core;
 use cursive::views::TextContent;
+use env_logger::Env;
 use log::info;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tasks::{handle_transactions, ui_task, update_balance, update_utxos};
-use util::{big_mode_btc, generate_config, setup_panic_hook, setup_tracing};
+use util::{big_mode_btc, generate_config};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -35,8 +36,7 @@ enum Commands {
 #[tokio::main]
 async fn main() -> Result<()> {
     // Init logger
-    setup_tracing()?;
-    setup_panic_hook();
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
     // Parse command line arguments
     let cli = Cli::parse();

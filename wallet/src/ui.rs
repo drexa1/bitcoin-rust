@@ -29,10 +29,9 @@ fn convert_amount(amount: f64, from: Unit, to: Unit) -> f64 {
 pub fn run_ui(core: Arc<Core>, balance_content: TextContent) -> Result<()> {
     info!("Initializing UI");
     let mut siv = cursive::default();
+    setup_siv(&mut siv, core.clone(), balance_content);
     siv.run();
     info!("Starting UI event loop");
-    setup_siv(&mut siv, core.clone(), balance_content);
-    info!("UI event loop ended");
     Ok(())
 }
 
