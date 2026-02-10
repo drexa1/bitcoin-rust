@@ -17,4 +17,4 @@ I'm dubious that instead of knowing how to do your job and doing it with an enab
 For performance, it's hard to say from my standpoint because the things I normally care about do not demand peak CPU performance. 
 But I'd be willing to contest it, particularly in the light of the latest initiatives around compiling-optimizing Python to C and its recent developments in JIT libraries...
 
-[EDIT]: After a couple of months, I have to admit that there is one argument which stands up: the argument for mathematical correctness in math-sensitive operations.
+[EDIT]: After a couple of months, I have to admit that there is one argument which stands up untouched: the argument for mathematical correctness in math-sensitive operations.
