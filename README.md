@@ -2,7 +2,7 @@
 
 After a long time actively avoiding learning Rust 🦀, I’ve decided to push myself and finally give it a committed try, driven by all the hype and FOMO, especially for blockchain projects.
 
-The book "Building Bitcoin in Rust"—by Lukáš Hozda has been a gem, delving deeply into both the practicalities of blockchain design and aproaching to Rust.  
+The book "Building Bitcoin in Rust"—has been a gem, delving deeply into both the practicalities of protocol design and aproaching to Rust.  
 However, what I decided to do here was to write side-by-side versions of the Rust code alongside a Python equivalent, with a double purpose:
 
 + a) because it serves me as a Rosetta stone to understand that "thing A" in Rust is just the same as "thing B" in Python. With Rust's sometimes abbreviated and algebraic syntax, it becomes easier to recognize: "okay, this is just [...]"
